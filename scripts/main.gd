@@ -24,6 +24,7 @@ var throttle_touch := 0.0
 var steer_touch := 0.0
 var job_stage := 0
 var toast_time := 0.0
+var autosave_time := 20.0
 
 var hud_layer: CanvasLayer
 var wallet_label: Label
@@ -513,6 +514,11 @@ func _add_title(parent: Node, title_text: String) -> void:
 func _physics_process(delta: float) -> void:
     if player == null or car == null:
         return
+    autosave_time -= delta
+    if autosave_time <= 0.0:
+        GameState.set_player_position(player.global_position)
+        GameState.save_game()
+        autosave_time = 20.0
     if Input.is_action_just_pressed("interact"):
         _interact()
     if Input.is_action_just_pressed("ui_cancel"):
@@ -704,6 +710,6 @@ func _show_toast(message: String) -> void:
         toast_time = 3.5
 
 func _notification(what: int) -> void:
-    if what == NOTIFICATION_WM_CLOSE_REQUEST and is_instance_valid(player):
+    if (what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED) and is_instance_valid(player):
         GameState.set_player_position(player.global_position)
         GameState.save_game()
