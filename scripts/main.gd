@@ -8,6 +8,7 @@ const CAR_REVERSE_SPEED := 6.0
 const JOB_REWARD := 750
 const TRAFFIC_SCRIPT = preload("res://scripts/traffic_vehicle.gd")
 const PEDESTRIAN_SCRIPT = preload("res://scripts/pedestrian.gd")
+const MINIMAP_SCRIPT = preload("res://scripts/minimap.gd")
 
 var mats: Dictionary = {}
 var window_transforms: Array[Transform3D] = []
@@ -56,6 +57,8 @@ var bank_panel: PanelContainer
 var phone_panel: PanelContainer
 var empire_panel: PanelContainer
 var job_panel: PanelContainer
+var map_panel: PanelContainer
+var minimap_display: Control
 var bank_info: Label
 var job_info: Label
 var phone_info: Label
@@ -651,6 +654,7 @@ func _build_hud() -> void:
     top_buttons.add_theme_constant_override("separation", 8)
     hud_layer.add_child(top_buttons)
     _add_button(top_buttons, "PHONE", _toggle_phone)
+    _add_button(top_buttons, "MAP", _toggle_map)
     _add_button(top_buttons, "BANK", _toggle_bank)
     _add_button(top_buttons, "JOBS", _job_action)
     _add_button(top_buttons, "EMPIRE", _toggle_empire)
@@ -684,8 +688,10 @@ func _layout_hud() -> void:
     var phone_size := phone_panel.get_combined_minimum_size()
     var empire_size := empire_panel.get_combined_minimum_size()
     var job_size := job_panel.get_combined_minimum_size()
+    var map_size := map_panel.get_combined_minimum_size()
     bank_panel.position = (view_size - bank_size) * 0.5
     phone_panel.position = (view_size - phone_size) * 0.5
+    map_panel.position = (view_size - map_size) * 0.5
     empire_panel.position = (view_size - empire_size) * 0.5
     job_panel.position = (view_size - job_size) * 0.5
 
@@ -791,6 +797,21 @@ func _build_panels() -> void:
     _add_button(phone_box, "CLOSE PHONE", _hide_panels, 180.0)
     phone_panel.hide()
 
+    map_panel = PanelContainer.new()
+    map_panel.custom_minimum_size = Vector2(390.0, 330.0)
+    map_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.08, 0.12, 0.98)))
+    hud_layer.add_child(map_panel)
+    var map_box := VBoxContainer.new()
+    map_box.add_theme_constant_override("separation", 6)
+    map_panel.add_child(map_box)
+    _add_title(map_box, "NAVAPURA CITY MAP")
+    minimap_display = Control.new()
+    minimap_display.custom_minimum_size = Vector2(360.0, 270.0)
+    minimap_display.set_script(MINIMAP_SCRIPT)
+    map_box.add_child(minimap_display)
+    _add_button(map_box, "CLOSE MAP", _hide_panels, 140.0)
+    map_panel.hide()
+
     job_panel = PanelContainer.new()
     job_panel.custom_minimum_size = Vector2(440.0, 390.0)
     job_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.08, 0.12, 0.98)))
@@ -856,6 +877,8 @@ func _physics_process(delta: float) -> void:
         _move_player(delta)
     _update_camera(delta)
     _update_job_progress()
+    if is_instance_valid(map_panel) and map_panel.visible:
+        _update_minimap()
     if toast_time > 0.0:
         toast_time -= delta
         if toast_time <= 0.0 and is_instance_valid(toast_label):
@@ -1109,6 +1132,12 @@ func _exit_car() -> void:
     active_vehicle = null
     _refresh_ui()
 
+func _toggle_map() -> void:
+    var should_open := not map_panel.visible
+    _hide_panels()
+    map_panel.visible = should_open
+    _update_minimap()
+
 func _toggle_bank() -> void:
     var should_open := not bank_panel.visible
     _hide_panels()
@@ -1127,6 +1156,7 @@ func _toggle_empire() -> void:
 func _hide_panels() -> void:
     bank_panel.hide()
     phone_panel.hide()
+    map_panel.hide()
     job_panel.hide()
     empire_panel.hide()
 
@@ -1178,6 +1208,8 @@ func _refresh_ui() -> void:
         return
     wallet_label.text = "WALLET  ₹%d     BANK  ₹%d" % [GameState.wallet, GameState.bank_balance]
     _update_fuel_hud()
+    if is_instance_valid(map_panel) and map_panel.visible:
+        _update_minimap()
     var travel_state := "DRIVING %s" % active_vehicle_kind.to_upper() if driving else "ON FOOT"
     location_label.text = "NAVAPURA  •  %s  •  NET WORTH ₹%d" % [travel_state, GameState.net_worth()]
     if is_instance_valid(bank_info):
@@ -1208,6 +1240,22 @@ func _refresh_ui() -> void:
             GameState.lifetime_earnings,
             GameState.net_worth()
         ]
+
+func _update_minimap() -> void:
+    if not is_instance_valid(minimap_display) or not is_instance_valid(player):
+        return
+    minimap_display.set("player_position", player.global_position)
+    var shown_vehicle: Node3D = active_vehicle if driving and is_instance_valid(active_vehicle) else car
+    if is_instance_valid(shown_vehicle):
+        minimap_display.set("vehicle_position", shown_vehicle.global_position)
+        minimap_display.set("has_vehicle", true)
+    else:
+        minimap_display.set("has_vehicle", false)
+    if is_instance_valid(pickup_marker):
+        minimap_display.set("pickup_position", pickup_marker.global_position)
+    if is_instance_valid(drop_marker):
+        minimap_display.set("destination_position", drop_marker.global_position)
+    minimap_display.set("job_stage", job_stage)
 
 func _update_fuel_hud() -> void:
     if is_instance_valid(fuel_label):
