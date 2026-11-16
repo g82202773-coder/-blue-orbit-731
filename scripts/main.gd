@@ -26,6 +26,8 @@ var drop_marker: Node3D
 
 var driving := false
 var car_speed := 0.0
+var camera_yaw := 0.0
+var camera_distance := 8.5
 var move_touch := Vector2.ZERO
 var run_touch := false
 var throttle_touch := 0.0
@@ -769,6 +771,7 @@ func _build_panels() -> void:
     phone_box.add_child(phone_info)
     _add_button(phone_box, "OPEN BANK", _toggle_bank, 180.0)
     _add_button(phone_box, "REFUEL VEHICLE • ₹300", _refuel_vehicle, 180.0)
+    _add_button(phone_box, "RESET CAMERA", _reset_camera, 180.0)
     _add_button(phone_box, "JOB BOARD", _job_action, 180.0)
     _add_button(phone_box, "MY EMPIRE", _toggle_empire, 180.0)
     _add_button(phone_box, "CLOSE PHONE", _hide_panels, 180.0)
@@ -945,9 +948,23 @@ func _drive_car(delta: float) -> void:
 
 func _update_camera(delta: float) -> void:
     var focus := active_vehicle.global_position if driving and is_instance_valid(active_vehicle) else player.global_position
-    var desired := focus + Vector3(0.0, 5.0, 8.5)
+    var offset := Vector3(0.0, 5.0, camera_distance).rotated(Vector3.UP, camera_yaw)
+    var desired := focus + offset
     camera.global_position = camera.global_position.lerp(desired, clampf(delta * 5.0, 0.0, 1.0))
     camera.look_at(focus + Vector3(0.0, 1.0, 0.0), Vector3.UP)
+
+func _reset_camera() -> void:
+    camera_yaw = 0.0
+    camera_distance = 8.5
+    _show_toast("Camera reset.")
+
+func _unhandled_input(event: InputEvent) -> void:
+    if event is InputEventScreenDrag:
+        camera_yaw -= event.relative.x * 0.004
+        camera_distance = clampf(camera_distance + event.relative.y * 0.018, 6.0, 13.0)
+    elif event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+        camera_yaw -= event.relative.x * 0.004
+        camera_distance = clampf(camera_distance + event.relative.y * 0.018, 6.0, 13.0)
 
 func _update_job_progress() -> void:
     if job_stage == 0:
