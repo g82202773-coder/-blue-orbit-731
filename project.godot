@@ -5,6 +5,9 @@ config/name="LIFE EMPIRE"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
+[autoload]
+GameState="*res://scripts/game_state.gd"
+
 [display]
 window/size/viewport_width=1280
 window/size/viewport_height=720
@@ -47,23 +50,3 @@ interact={
 "deadzone": 0.5,
 "events": [Object(InputEventKey, "physical_keycode": 69)]
 }
-accelerate={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "physical_keycode": 87)]
-}
-brake={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "physical_keycode": 83)]
-}
-steer_left={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "physical_keycode": 65)]
-}
-steer_right={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "physical_keycode": 68)]
-}
-
-[application]
-config/name="LIFE EMPIRE"
-run/main_scene="res://scenes/main.tscn"
