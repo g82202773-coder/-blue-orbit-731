@@ -271,7 +271,7 @@ func _build_car() -> void:
             wheel_mesh.height = 0.24
             wheel.mesh = wheel_mesh
             wheel.rotation_degrees.z = 90.0
-            wheel.position = Vector3(x, -0.28, z)
+            wheel.position = Vector3(x, -0.03, z)
             wheel.material_override = mats["dark"]
             car.add_child(wheel)
     add_child(car)
