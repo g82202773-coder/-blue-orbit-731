@@ -179,8 +179,8 @@ func _build_city() -> void:
     for road_x in [-80.0, -40.0, 0.0, 40.0, 80.0]:
         for side in [-1.0, 1.0]:
             for interval in blocks:
-                var length := interval[1] - interval[0]
-                var center := (interval[0] + interval[1]) * 0.5
+                var length: float = float(interval[1]) - float(interval[0])
+                var center: float = (float(interval[0]) + float(interval[1])) * 0.5
                 _box_mesh(self, Vector3(1.8, 0.14, length), Vector3(road_x + side * 6.9, 0.055, center), mats["sidewalk"], "BlockSidewalk")
 
     var palettes: Array[Material] = [mats["cream"], mats["blue"], mats["brick"], mats["concrete"]]
