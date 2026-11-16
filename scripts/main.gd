@@ -781,6 +781,7 @@ func _build_panels() -> void:
     empire_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     empire_box.add_child(empire_info)
     _add_button(empire_box, "BUY STARTER HOME • ₹3,000", _buy_home, 280.0)
+    bike_button = _add_button(empire_box, "BUY MOTORBIKE • ₹2,500", _buy_bike, 280.0)
     _add_button(empire_box, "BUY CORNER SHOP • ₹4,000", _buy_shop, 280.0)
     _add_button(empire_box, "COLLECT SHOP INCOME", _collect_shop, 280.0)
     _add_button(empire_box, "SLEEP / NEXT DAY", _next_day, 280.0)
@@ -870,35 +871,43 @@ func _move_player(delta: float) -> void:
     GameState.set_player_position(player.global_position)
 
 func _drive_car(delta: float) -> void:
+    if not is_instance_valid(active_vehicle):
+        _exit_car()
+        return
     var keyboard_throttle := float(Input.is_action_pressed("move_forward")) - float(Input.is_action_pressed("move_back"))
     var throttle := throttle_touch if absf(throttle_touch) > 0.01 else keyboard_throttle
+    var bike_mode := active_vehicle_kind == "motorbike"
+    var top_speed := 21.0 if bike_mode else CAR_FORWARD_SPEED
+    var reverse_speed := 4.5 if bike_mode else CAR_REVERSE_SPEED
+    var acceleration := 15.0 if bike_mode else 12.0
     if throttle > 0.0:
-        car_speed = move_toward(car_speed, CAR_FORWARD_SPEED, 12.0 * delta)
+        car_speed = move_toward(car_speed, top_speed, acceleration * delta)
     elif throttle < 0.0:
         if car_speed > 1.0:
             car_speed = move_toward(car_speed, 0.0, 22.0 * delta)
         else:
-            car_speed = move_toward(car_speed, -CAR_REVERSE_SPEED, 8.0 * delta)
+            car_speed = move_toward(car_speed, -reverse_speed, 8.0 * delta)
     else:
-        car_speed = move_toward(car_speed, 0.0, 4.0 * delta)
+        car_speed = move_toward(car_speed, 0.0, (4.8 if bike_mode else 4.0) * delta)
 
     var keyboard_steer := float(Input.is_action_pressed("move_right")) - float(Input.is_action_pressed("move_left"))
     var steer := steer_touch if absf(steer_touch) > 0.01 else (move_touch.x if absf(move_touch.x) > 0.01 else keyboard_steer)
     if absf(car_speed) > 0.25:
-        car.rotate_y(-steer * delta * 1.15 * clampf(absf(car_speed) / 5.0, 0.2, 1.0) * signf(car_speed))
-    var forward := -car.global_basis.z
-    car.velocity.x = forward.x * car_speed
-    car.velocity.z = forward.z * car_speed
-    if not car.is_on_floor():
-        car.velocity.y -= 9.8 * delta
+        var steering_rate := 1.45 if bike_mode else 1.15
+        active_vehicle.rotate_y(-steer * delta * steering_rate * clampf(absf(car_speed) / 5.0, 0.2, 1.0) * signf(car_speed))
+    var forward := -active_vehicle.global_basis.z
+    active_vehicle.velocity.x = forward.x * car_speed
+    active_vehicle.velocity.z = forward.z * car_speed
+    if not active_vehicle.is_on_floor():
+        active_vehicle.velocity.y -= 9.8 * delta
     else:
-        car.velocity.y = -0.5
-    car.move_and_slide()
-    player.global_position = car.global_position + Vector3(0.0, 0.1, 0.0)
+        active_vehicle.velocity.y = -0.5
+    active_vehicle.move_and_slide()
+    player.global_position = active_vehicle.global_position + Vector3(0.0, 0.1, 0.0)
     GameState.set_player_position(player.global_position)
 
 func _update_camera(delta: float) -> void:
-    var focus := car.global_position if driving else player.global_position
+    var focus := active_vehicle.global_position if driving and is_instance_valid(active_vehicle) else player.global_position
     var desired := focus + Vector3(0.0, 5.0, 8.5)
     camera.global_position = camera.global_position.lerp(desired, clampf(delta * 5.0, 0.0, 1.0))
     camera.look_at(focus + Vector3(0.0, 1.0, 0.0), Vector3.UP)
@@ -973,27 +982,43 @@ func _interact() -> void:
     if driving:
         _exit_car()
         return
-    if player.global_position.distance_to(car.global_position) <= 5.0:
+    var nearest_vehicle: CharacterBody3D = car
+    var nearest_distance := player.global_position.distance_to(car.global_position)
+    var vehicle_kind := "car"
+    if is_instance_valid(bike):
+        var bike_distance := player.global_position.distance_to(bike.global_position)
+        if bike_distance < nearest_distance:
+            nearest_vehicle = bike
+            nearest_distance = bike_distance
+            vehicle_kind = "motorbike"
+    if nearest_distance <= 5.5:
+        active_vehicle = nearest_vehicle
+        active_vehicle_kind = vehicle_kind
         driving = true
         player.hide()
         player.collision_layer = 0
         player.collision_mask = 0
         car_speed = 0.0
-        _show_toast("You entered your car. Use ACCEL and BRAKE.")
+        _show_toast("You entered your %s. Use ACCEL and BRAKE." % vehicle_kind)
+        _refresh_ui()
     else:
-        _show_toast("Walk closer to your blue car to enter.")
+        _show_toast("Walk closer to your car or motorbike to enter.")
 
 func _exit_car() -> void:
     if not driving:
         return
     driving = false
+    if is_instance_valid(active_vehicle):
+        var side_offset := 1.6 if active_vehicle_kind == "motorbike" else 2.4
+        player.global_position = active_vehicle.global_position + active_vehicle.global_basis.x * side_offset + Vector3(0.0, 0.35, 0.0)
     player.show()
     player.collision_layer = 1
     player.collision_mask = 1
-    player.global_position = car.global_position + car.global_basis.x * 2.4 + Vector3(0.0, 0.35, 0.0)
     player.velocity = Vector3.ZERO
     car_speed = 0.0
-    _show_toast("You left the car.")
+    _show_toast("You left the %s." % active_vehicle_kind)
+    active_vehicle = null
+    _refresh_ui()
 
 func _toggle_bank() -> void:
     var should_open := not bank_panel.visible
@@ -1019,6 +1044,14 @@ func _hide_panels() -> void:
 func _buy_home() -> void:
     GameState.buy_home()
 
+func _buy_bike() -> void:
+    if GameState.bike_owned:
+        _show_toast("Your motorbike is parked beside the central road.")
+        return
+    if GameState.buy_bike():
+        _build_bike()
+        _refresh_ui()
+
 func _buy_shop() -> void:
     GameState.buy_shop()
 
@@ -1037,7 +1070,8 @@ func _refresh_ui() -> void:
     if not is_instance_valid(wallet_label):
         return
     wallet_label.text = "WALLET  ₹%d     BANK  ₹%d" % [GameState.wallet, GameState.bank_balance]
-    location_label.text = "NAVAPURA  •  %s  •  NET WORTH ₹%d" % ["DRIVING" if driving else "ON FOOT", GameState.net_worth()]
+    var travel_state := "DRIVING %s" % active_vehicle_kind.to_upper() if driving else "ON FOOT"
+    location_label.text = "NAVAPURA  •  %s  •  NET WORTH ₹%d" % [travel_state, GameState.net_worth()]
     if is_instance_valid(bank_info):
         var recent := ""
         for i in range(mini(GameState.transactions.size(), 5)):
@@ -1050,13 +1084,16 @@ func _refresh_ui() -> void:
             job_info.text = "Choose a job. Complete the pickup and reach the destination to earn your reward.\nCompleted jobs: %d" % GameState.missions_completed
         else:
             job_info.text = "ACTIVE: %s\nReward: ₹%d\nStep: %s" % [job_title, job_reward_active, "Go to pickup" if job_stage == 1 else "Deliver to destination"]
+    if is_instance_valid(bike_button):
+        bike_button.text = "MOTORBIKE OWNED • ₹2,500 VALUE" if GameState.bike_owned else "BUY MOTORBIKE • ₹2,500"
     if is_instance_valid(empire_info):
-        empire_info.text = "Day %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nCorner shop: %s\nUncollected income: ₹%d\nLifetime earnings: ₹%d\nNet worth: ₹%d" % [
+        empire_info.text = "Day %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nCorner shop: %s\nMotorbike: %s\nUncollected income: ₹%d\nLifetime earnings: ₹%d\nNet worth: ₹%d" % [
             GameState.day_number,
             GameState.wallet,
             GameState.bank_balance,
             "Owned" if GameState.home_owned else "Not owned",
             "Owned" if GameState.shop_owned else "Not owned",
+            "Owned" if GameState.bike_owned else "Not owned",
             GameState.uncollected_shop_income,
             GameState.lifetime_earnings,
             GameState.net_worth()
