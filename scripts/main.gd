@@ -6,6 +6,8 @@ const RUN_SPEED := 7.2
 const CAR_FORWARD_SPEED := 17.0
 const CAR_REVERSE_SPEED := 6.0
 const JOB_REWARD := 750
+const TRAFFIC_SCRIPT = preload("res://scripts/traffic_vehicle.gd")
+const PEDESTRIAN_SCRIPT = preload("res://scripts/pedestrian.gd")
 
 var mats: Dictionary = {}
 var player: CharacterBody3D
@@ -155,6 +157,54 @@ func _build_city() -> void:
         _build_tree(p)
 
     _build_street_sign(Vector3(0.0, 0.0, -3.0), "NAVAPURA")
+    _build_traffic()
+    _build_pedestrians()
+
+func _build_traffic() -> void:
+    var route := PackedVector3Array([
+        Vector3(-90.0, 0.55, -80.0),
+        Vector3(-40.0, 0.55, -80.0),
+        Vector3(0.0, 0.55, -80.0),
+        Vector3(40.0, 0.55, -80.0),
+        Vector3(80.0, 0.55, -80.0),
+        Vector3(80.0, 0.55, -40.0),
+        Vector3(80.0, 0.55, 0.0),
+        Vector3(80.0, 0.55, 40.0),
+        Vector3(80.0, 0.55, 80.0),
+        Vector3(40.0, 0.55, 80.0),
+        Vector3(0.0, 0.55, 80.0),
+        Vector3(-40.0, 0.55, 80.0),
+        Vector3(-80.0, 0.55, 80.0),
+        Vector3(-80.0, 0.55, 40.0),
+        Vector3(-80.0, 0.55, 0.0),
+        Vector3(-80.0, 0.55, -40.0)
+    ])
+    var colors: Array[Color] = [Color("#b94c3d"), Color("#d1a33f"), Color("#e5e2d8")]
+    for i in range(3):
+        var traffic_car := Node3D.new()
+        traffic_car.set_script(TRAFFIC_SCRIPT)
+        traffic_car.set("route", route)
+        traffic_car.set("start_index", i * 5)
+        traffic_car.set("speed", 5.0 + float(i) * 0.45)
+        traffic_car.set("paint_color", colors[i])
+        add_child(traffic_car)
+
+func _build_pedestrians() -> void:
+    var routes: Array[PackedVector3Array] = [
+        PackedVector3Array([Vector3(-32.0, 0.9, -30.0), Vector3(-32.0, 0.9, 30.0), Vector3(-48.0, 0.9, 30.0), Vector3(-48.0, 0.9, -30.0)]),
+        PackedVector3Array([Vector3(32.0, 0.9, 30.0), Vector3(32.0, 0.9, -30.0), Vector3(48.0, 0.9, -30.0), Vector3(48.0, 0.9, 30.0)]),
+        PackedVector3Array([Vector3(-30.0, 0.9, -32.0), Vector3(30.0, 0.9, -32.0), Vector3(30.0, 0.9, -48.0), Vector3(-30.0, 0.9, -48.0)]),
+        PackedVector3Array([Vector3(30.0, 0.9, 32.0), Vector3(-30.0, 0.9, 32.0), Vector3(-30.0, 0.9, 48.0), Vector3(30.0, 0.9, 48.0)])
+    ]
+    var clothes: Array[Color] = [Color("#315e83"), Color("#9b5a43"), Color("#4f7550"), Color("#80628c")]
+    for i in range(routes.size()):
+        var pedestrian := Node3D.new()
+        pedestrian.set_script(PEDESTRIAN_SCRIPT)
+        pedestrian.set("route", routes[i])
+        pedestrian.set("start_index", 0)
+        pedestrian.set("walk_speed", 1.0 + float(i % 2) * 0.25)
+        pedestrian.set("clothing_color", clothes[i])
+        add_child(pedestrian)
 
 func _build_building(center: Vector3, size: Vector3, facade: Material, index: int) -> void:
     var body := StaticBody3D.new()
