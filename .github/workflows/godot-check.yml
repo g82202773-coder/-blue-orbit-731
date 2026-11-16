@@ -1,0 +1,30 @@
+name: Godot 4.7 validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parse-and-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Godot 4.7
+        uses: solarlabyrinth/action-setup-godot@v3
+        with:
+          version: 4.7-stable
+          export-templates: false
+
+      - name: Import project and parse scripts
+        run: godot --headless --path . --editor --quit
+
+      - name: Launch main scene headlessly
+        run: godot --headless --path . --quit-after 120
