@@ -13,6 +13,7 @@ var lifetime_earnings: int = 0
 var day_number: int = 1
 var home_owned: bool = false
 var shop_owned: bool = false
+var bike_owned: bool = false
 var uncollected_shop_income: int = 0
 var missions_completed: int = 0
 var player_position: Vector3 = Vector3(0.0, 0.0, 5.4)
@@ -27,6 +28,8 @@ func net_worth() -> int:
         assets += 3000
     if shop_owned:
         assets += 4000 + uncollected_shop_income
+    if bike_owned:
+        assets += 2500
     return assets
 
 func add_transaction(description: String) -> void:
@@ -88,6 +91,20 @@ func buy_home() -> bool:
     toast_requested.emit("Your first home is now yours!")
     return true
 
+func buy_bike() -> bool:
+    if bike_owned:
+        toast_requested.emit("You already own a motorbike.")
+        return false
+    if wallet < 2500:
+        toast_requested.emit("You need ₹2,500 in your wallet.")
+        return false
+    wallet -= 2500
+    bike_owned = true
+    add_transaction("Purchased motorbike • -₹2,500")
+    save_game()
+    toast_requested.emit("Your motorbike is ready in the city!")
+    return true
+
 func buy_shop() -> bool:
     if shop_owned:
         toast_requested.emit("You already own the corner shop.")
@@ -138,6 +155,7 @@ func save_game() -> void:
         "day_number": day_number,
         "home_owned": home_owned,
         "shop_owned": shop_owned,
+        "bike_owned": bike_owned,
         "uncollected_shop_income": uncollected_shop_income,
         "missions_completed": missions_completed,
         "player_x": player_position.x,
@@ -172,6 +190,7 @@ func load_game() -> void:
     day_number = maxi(1, int(parsed.get("day_number", 1)))
     home_owned = bool(parsed.get("home_owned", parsed.get("property_owned", false)))
     shop_owned = bool(parsed.get("shop_owned", parsed.get("business_owned", false)))
+    bike_owned = bool(parsed.get("bike_owned", false))
     uncollected_shop_income = maxi(0, int(parsed.get("uncollected_shop_income", parsed.get("business_cashflow", 0))))
     missions_completed = maxi(0, int(parsed.get("missions_completed", 0)))
     player_position = Vector3(
