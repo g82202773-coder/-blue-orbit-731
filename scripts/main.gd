@@ -10,6 +10,10 @@ const TRAFFIC_SCRIPT = preload("res://scripts/traffic_vehicle.gd")
 const PEDESTRIAN_SCRIPT = preload("res://scripts/pedestrian.gd")
 
 var mats: Dictionary = {}
+var window_transforms: Array[Transform3D] = []
+var trim_transforms: Array[Transform3D] = []
+var lane_transforms: Array[Transform3D] = []
+var crosswalk_transforms: Array[Transform3D] = []
 var player: CharacterBody3D
 var car: CharacterBody3D
 var camera: Camera3D
@@ -36,6 +40,10 @@ var empire_panel: PanelContainer
 var bank_info: Label
 var phone_info: Label
 var empire_info: Label
+var status_panel: PanelContainer
+var top_buttons: HBoxContainer
+var left_pad: PanelContainer
+var right_pad: PanelContainer
 
 func _ready() -> void:
     GameState.state_changed.connect(_refresh_ui)
@@ -113,14 +121,23 @@ func _build_environment() -> void:
     environment.sky = sky
     environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
     environment.ambient_light_color = Color(0.72, 0.76, 0.82)
-    environment.ambient_light_energy = 0.72
+    environment.ambient_light_energy = 0.82
+    environment.ambient_light_color = Color("#c5d0d8")
+    environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+    var sky_material := sky.sky_material as ProceduralSkyMaterial
+    sky_material.sky_top_color = Color("#5e8fb8")
+    sky_material.sky_horizon_color = Color("#c7d7df")
+    sky_material.ground_bottom_color = Color("#303c43")
+    sky_material.ground_horizon_color = Color("#a2b1b6")
     world.environment = environment
     add_child(world)
 
     var sun := DirectionalLight3D.new()
     sun.rotation_degrees = Vector3(-48.0, -32.0, 0.0)
-    sun.light_energy = 1.05
-    sun.shadow_enabled = true
+    sun.light_energy = 1.15
+    # Real-time shadow maps are disproportionately expensive on entry-level phones.
+    # Ambient/fill lighting keeps the scene readable without them.
+    sun.shadow_enabled = false
     add_child(sun)
 
     _static_box(self, Vector3(CITY_EXTENT, 0.5, CITY_EXTENT), Vector3(0.0, -0.3, 0.0), mats["grass"], "Ground")
@@ -130,8 +147,16 @@ func _build_city() -> void:
     for lane in [-80.0, -40.0, 0.0, 40.0, 80.0]:
         _box_mesh(self, Vector3(CITY_EXTENT, 0.12, 12.0), Vector3(0.0, 0.0, lane), mats["asphalt"], "EastWestRoad")
         _box_mesh(self, Vector3(12.0, 0.12, CITY_EXTENT), Vector3(lane, 0.01, 0.0), mats["asphalt"], "NorthSouthRoad")
-        _box_mesh(self, Vector3(CITY_EXTENT, 0.035, 0.13), Vector3(0.0, 0.085, lane), mats["road_line"], "RoadCenterLine")
-        _box_mesh(self, Vector3(0.13, 0.035, CITY_EXTENT), Vector3(lane, 0.095, 0.0), mats["road_line"], "RoadCenterLine")
+        # Raised concrete curbs, kept outside the carriageway.
+        for side in [-1.0, 1.0]:
+            _box_mesh(self, Vector3(CITY_EXTENT, 0.22, 0.28), Vector3(0.0, 0.08, lane + side * 6.2), mats["sidewalk"], "RoadCurb")
+            _box_mesh(self, Vector3(0.28, 0.22, CITY_EXTENT), Vector3(lane + side * 6.2, 0.08, 0.0), mats["sidewalk"], "RoadCurb")
+        # Short dashed center markings, batched into one draw call later.
+        for mark in range(-9, 10):
+            if absf(mark) % 2 == 1:
+                continue
+            lane_transforms.append(Transform3D(Basis.IDENTITY, Vector3(float(mark) * 10.0, 0.09, lane)))
+            lane_transforms.append(Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(lane, 0.09, float(mark) * 10.0)))
 
     # Sidewalk strips around the main blocks.
     for z in [-73.0, -47.0, -33.0, -7.0, 7.0, 33.0, 47.0, 73.0]:
@@ -157,7 +182,10 @@ func _build_city() -> void:
     ]:
         _build_tree(p)
 
+    _build_window_batch()
+    _build_road_markings()
     _build_street_sign(Vector3(0.0, 0.0, -3.0), "NAVAPURA")
+    _build_street_lights()
     _build_traffic()
     _build_pedestrians()
 
@@ -219,15 +247,90 @@ func _build_building(center: Vector3, size: Vector3, facade: Material, index: in
     _box_mesh(body, Vector3(size.x + 0.35, 0.35, size.z + 0.35), Vector3(0.0, size.y * 0.5 + 0.18, 0.0), mats["dark"], "Roof")
     add_child(body)
 
-    # A restrained set of repeated windows keeps draw calls and geometry modest.
-    var window_rows := int(size.y / 3.6)
-    for row in range(mini(window_rows, 3)):
-        for column in range(2):
-            var wx := (float(column) - 0.5) * size.x * 0.38
-            var wy := -size.y * 0.5 + 2.0 + float(row) * 3.0
-            _box_mesh(body, Vector3(1.5, 1.0, 0.08), Vector3(wx, wy, -size.z * 0.5 - 0.045), mats["glass"], "Window")
+    # Repeated facade elements are GPU-instanced across the whole city sector.
+    var window_rows := mini(int(size.y / 3.8), 4)
+    for row in range(window_rows):
+        for column in range(3):
+            var wx := (float(column) - 1.0) * size.x * 0.29
+            var wy := -size.y * 0.5 + 2.0 + float(row) * 3.2
+            window_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(wx, wy, -size.z * 0.5 - 0.08)))
+            window_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(wx, wy, size.z * 0.5 + 0.08)))
+        if row > 0:
+            trim_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(0.0, -size.y * 0.5 + 1.0 + float(row) * 3.2, -size.z * 0.5 - 0.08)))
     if index % 4 == 0:
-        _box_mesh(body, Vector3(4.0, 1.0, 0.16), Vector3(0.0, -size.y * 0.5 + 1.1, -size.z * 0.5 - 0.09), mats["red"], "ShopSign")
+        _build_shop_front(body, size, index)
+
+func _create_multimesh_batch(mesh: Mesh, material: Material, transforms: Array[Transform3D], node_name: String) -> void:
+    if transforms.is_empty():
+        return
+    var mm := MultiMesh.new()
+    mm.transform_format = MultiMesh.TRANSFORM_3D
+    mm.mesh = mesh
+    mm.instance_count = transforms.size()
+    mm.visible_instance_count = transforms.size()
+    for i in range(transforms.size()):
+        mm.set_instance_transform(i, transforms[i])
+    var instance := MultiMeshInstance3D.new()
+    instance.name = node_name
+    instance.multimesh = mm
+    instance.material_override = material
+    add_child(instance)
+
+func _build_window_batch() -> void:
+    var window_mesh := BoxMesh.new()
+    window_mesh.size = Vector3(1.5, 1.05, 0.10)
+    _create_multimesh_batch(window_mesh, mats["glass"], window_transforms, "InstancedCityWindows")
+    var trim_mesh := BoxMesh.new()
+    trim_mesh.size = Vector3(11.5, 0.13, 0.18)
+    _create_multimesh_batch(trim_mesh, mats["white"], trim_transforms, "InstancedFacadeTrims")
+
+func _build_road_markings() -> void:
+    var dash := BoxMesh.new()
+    dash.size = Vector3(2.6, 0.035, 0.15)
+    _create_multimesh_batch(dash, mats["road_line"], lane_transforms, "InstancedLaneDashes")
+    var zebra := BoxMesh.new()
+    zebra.size = Vector3(0.55, 0.04, 4.8)
+    var crossings: Array[Transform3D] = []
+    for intersection in [-80.0, -40.0, 0.0, 40.0, 80.0]:
+        for offset in range(-4, 5):
+            crossings.append(Transform3D(Basis.IDENTITY, Vector3(intersection + float(offset) * 0.85, 0.095, intersection - 8.5)))
+            crossings.append(Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(intersection - 8.5, 0.095, intersection + float(offset) * 0.85)))
+    _create_multimesh_batch(zebra, mats["white"], crossings, "InstancedZebraCrossings")
+
+func _build_shop_front(parent: Node3D, size: Vector3, index: int) -> void:
+    var sign_color := mats["red"] if index % 8 == 0 else mats["blue"]
+    _box_mesh(parent, Vector3(4.5, 0.72, 0.24), Vector3(0.0, -size.y * 0.5 + 1.65, -size.z * 0.5 - 0.18), sign_color, "ShopCanopy")
+    _box_mesh(parent, Vector3(2.7, 1.7, 0.10), Vector3(0.0, -size.y * 0.5 + 0.75, -size.z * 0.5 - 0.08), mats["glass"], "ShopfrontWindow")
+    var sign := Label3D.new()
+    var names := ["MARKET", "TEA HOUSE", "MOBILE HUB", "GROCERY"]
+    sign.text = names[(index / 4) % names.size()]
+    sign.font_size = 28
+    sign.outline_size = 5
+    sign.modulate = Color("#fff4d8")
+    sign.position = Vector3(0.0, -size.y * 0.5 + 1.75, -size.z * 0.5 - 0.33)
+    sign.pixel_size = 0.012
+    parent.add_child(sign)
+
+func _build_street_lights() -> void:
+    for x in [-68.0, -28.0, 28.0, 68.0]:
+        for z in [-68.0, 68.0]:
+            var pole := MeshInstance3D.new()
+            var pole_mesh := CylinderMesh.new()
+            pole_mesh.top_radius = 0.07
+            pole_mesh.bottom_radius = 0.12
+            pole_mesh.height = 6.5
+            pole.mesh = pole_mesh
+            pole.position = Vector3(x, 3.25, z)
+            pole.material_override = mats["dark"]
+            add_child(pole)
+            _box_mesh(self, Vector3(1.1, 0.12, 0.22), Vector3(x + 0.42, 6.3, z), mats["dark"], "StreetLightArm")
+            var lamp := _box_mesh(self, Vector3(0.7, 0.16, 0.45), Vector3(x + 0.78, 6.23, z), mats["yellow"], "StreetLamp")
+            var glow := StandardMaterial3D.new()
+            glow.albedo_color = Color("#f3d69b")
+            glow.emission_enabled = true
+            glow.emission = Color("#f1c878")
+            glow.emission_energy_multiplier = 0.35
+            lamp.material_override = glow
 
 func _build_tree(position: Vector3) -> void:
     var trunk := MeshInstance3D.new()
