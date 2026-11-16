@@ -22,9 +22,12 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Responsive landscape HUD that repositions for ultrawide Android screens.
 - 60 FPS ceiling with adaptive 3D resolution scaling and an on-screen FPS/scale monitor.
 - Third-person on-foot movement, walking/running, and touch D-pad controls.
-- Enterable arcade-style starter car with acceleration, braking, reverse and steering.
+- Enterable starter car and purchasable commuter motorbike, with separate arcade handling, acceleration, braking, reverse and steering.
+- Vehicle ownership, transforms and active driving state persist across app restarts.
+- Fuel consumption while driving and a ₹300 phone-based refuelling action.
 - Three lightweight moving traffic cars and four looping pedestrians.
-- Delivery mission with pickup/drop-off markers and ₹750 reward.
+- Job board with food delivery (₹650), taxi pickup (₹500) and courier parcel (₹900) missions, each with separate pickup/drop-off routes.
+- Persistent completed-job counter and mission reward history.
 - Fictional wallet and bank with ₹500 deposit/withdraw actions and recent transaction records.
 - Starter home and corner-shop purchases, daily shop income, and collect-income action.
 - Offline JSON save/load, 20-second autosave, and Android application-pause saving.
