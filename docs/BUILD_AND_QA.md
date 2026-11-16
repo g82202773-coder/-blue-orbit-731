@@ -40,14 +40,16 @@ General workflow:
 - [ ] Home and shop purchases deduct the correct amount.
 - [ ] Shop income accrues per in-game day and can be collected.
 - [ ] Wallet, bank, assets, day and recent transactions persist after force-close/reopen.
-- [ ] Android debug APK installs and runs in landscape.
-- [ ] Performance is measured on a 4 GB RAM Android device.
+- [ ] Install the latest debug APK on a physical phone and verify landscape layout and touch controls.
+- [ ] Record the on-screen FPS and 3D resolution scale during walking and driving.
+- [ ] Measure memory, heat and performance on a 4 GB RAM Android device.
 
 ## Current verification status
 - **Godot 4.7 CI import and GDScript parse:** passed.
 - **Economy regression tests:** passed for deposit, withdrawal, property/shop purchase, daily income, income collection, and save/load restoration.
 - **Headless main-scene smoke run (120 frames):** passed.
-- Latest successful GitHub Actions run: [run #6](https://github.com/g82202773-coder/Life-Empire/actions/runs/43910323729), on commit `48e6e161f6f3d628953d5f72997138e13c35f077`.
-- **Visual review, touch input on a phone, gameplay balancing, Android APK export, install test and 4 GB device performance:** not yet verified.
+- Latest Godot 4.7 validation passed on commit `1a294bb6d5f080b5f4aca90a8e2d2fccf3f15f51`.
+- Latest Android debug APK export passed: [GitHub Actions run](https://github.com/g82202773-coder/Life-Empire/actions/runs/43915797990). The APK artifact is named `LIFE-EMPIRE-debug-APK`.
+- **Visual review, touch input on a phone, gameplay balancing, install test and 4 GB device performance:** not yet verified.
 
 The CI result proves scripts import and parse, the economy smoke checks pass, and the main scene starts in the headless CI environment. It does not prove that every feature behaves correctly in a rendered game, that mobile controls feel good, or that the APK is ready for release.
