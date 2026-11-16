@@ -807,6 +807,7 @@ func _build_panels() -> void:
     _add_button(empire_box, "BUY STARTER HOME • ₹3,000", _buy_home, 280.0)
     bike_button = _add_button(empire_box, "BUY MOTORBIKE • ₹2,500", _buy_bike, 280.0)
     _add_button(empire_box, "BUY CORNER SHOP • ₹4,000", _buy_shop, 280.0)
+    _add_button(empire_box, "HIRE SHOP EMPLOYEE • ₹500", _hire_shop_employee, 280.0)
     _add_button(empire_box, "COLLECT SHOP INCOME", _collect_shop, 280.0)
     _add_button(empire_box, "SLEEP / NEXT DAY", _next_day, 280.0)
     _add_button(empire_box, "CLOSE", _hide_panels, 120.0)
@@ -1100,6 +1101,10 @@ func _buy_bike() -> void:
 func _buy_shop() -> void:
     GameState.buy_shop()
 
+func _hire_shop_employee() -> void:
+    if GameState.hire_shop_employee():
+        _refresh_ui()
+
 func _collect_shop() -> void:
     GameState.collect_shop_income()
 
@@ -1141,12 +1146,14 @@ func _refresh_ui() -> void:
     if is_instance_valid(bike_button):
         bike_button.text = "MOTORBIKE OWNED • ₹2,500 VALUE" if GameState.bike_owned else "BUY MOTORBIKE • ₹2,500"
     if is_instance_valid(empire_info):
-        empire_info.text = "Day %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nCorner shop: %s\nMotorbike: %s\nUncollected income: ₹%d\nLifetime earnings: ₹%d\nNet worth: ₹%d" % [
+        empire_info.text = "Day %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nCorner shop: %s\nShop employees: %d / 3\nDaily shop income: ₹%d\nMotorbike: %s\nUncollected income: ₹%d\nLifetime earnings: ₹%d\nNet worth: ₹%d" % [
             GameState.day_number,
             GameState.wallet,
             GameState.bank_balance,
             "Owned" if GameState.home_owned else "Not owned",
             "Owned" if GameState.shop_owned else "Not owned",
+            GameState.shop_employee_count,
+            250 + GameState.shop_employee_count * 100 if GameState.shop_owned else 0,
             "Owned" if GameState.bike_owned else "Not owned",
             GameState.uncollected_shop_income,
             GameState.lifetime_earnings,
