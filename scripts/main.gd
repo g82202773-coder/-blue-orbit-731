@@ -17,6 +17,9 @@ var crosswalk_transforms: Array[Transform3D] = []
 var player: CharacterBody3D
 var car: CharacterBody3D
 var bike: CharacterBody3D
+var player_legs: Array[MeshInstance3D] = []
+var player_arms: Array[MeshInstance3D] = []
+var player_animation_clock := 0.0
 var active_vehicle: CharacterBody3D
 var active_vehicle_kind := "car"
 var bike_button: Button
@@ -440,10 +443,12 @@ func _build_player() -> void:
     _add_capsule_piece(player, 0.29, 1.02, Vector3(0.0, 0.22, 0.0), mats["player"], "Torso")
     _box_mesh(player, Vector3(0.48, 0.28, 0.30), Vector3(0.0, -0.27, 0.0), mats["blue"], "Waist")
     for side in [-1.0, 1.0]:
-        _add_capsule_piece(player, 0.13, 0.78, Vector3(side * 0.15, -0.63, 0.0), mats["dark"], "Leg")
+        var leg := _add_capsule_piece(player, 0.13, 0.78, Vector3(side * 0.15, -0.63, 0.0), mats["dark"], "Leg")
+        player_legs.append(leg)
         _box_mesh(player, Vector3(0.22, 0.13, 0.36), Vector3(side * 0.15, -1.01, -0.05), mats["dark"], "Shoe")
         var arm := _add_capsule_piece(player, 0.105, 0.72, Vector3(side * 0.36, 0.22, 0.0), mats["player"], "Arm")
         arm.rotation.z = side * -0.12
+        player_arms.append(arm)
 
     var head := MeshInstance3D.new()
     var head_mesh := SphereMesh.new()
@@ -905,7 +910,24 @@ func _move_player(delta: float) -> void:
     else:
         player.velocity.y = -0.5
     player.move_and_slide()
+    _animate_player(delta, input_axis.length() > 0.05, speed)
     GameState.set_player_position(player.global_position)
+
+func _animate_player(delta: float, moving: bool, move_speed: float) -> void:
+    if player_legs.size() < 2 or player_arms.size() < 2:
+        return
+    if moving:
+        player_animation_clock += delta * (11.5 if move_speed > WALK_SPEED + 0.5 else 8.0)
+    var swing := sin(player_animation_clock) * (0.48 if moving else 0.0)
+    var target_leg_left := swing
+    var target_leg_right := -swing
+    var target_arm_left := -swing * 0.72
+    var target_arm_right := swing * 0.72
+    var blend := clampf(delta * (12.0 if moving else 8.0), 0.0, 1.0)
+    player_legs[0].rotation.x = lerpf(player_legs[0].rotation.x, target_leg_left, blend)
+    player_legs[1].rotation.x = lerpf(player_legs[1].rotation.x, target_leg_right, blend)
+    player_arms[0].rotation.x = lerpf(player_arms[0].rotation.x, target_arm_left, blend)
+    player_arms[1].rotation.x = lerpf(player_arms[1].rotation.x, target_arm_right, blend)
 
 func _drive_car(delta: float) -> void:
     if not is_instance_valid(active_vehicle):
