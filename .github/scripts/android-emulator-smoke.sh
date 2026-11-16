@@ -37,6 +37,19 @@ sleep 20
 PID="$(adb shell pidof "$PACKAGE" 2>/dev/null | tr -d '\r' || true)"
 echo "LIFE EMPIRE process PID: $PID"
 
+# Android shows an immersive-mode confirmation the first time a fullscreen
+# app launches. Capture it for diagnostics, tap its "Got it" area, then
+# capture the unobstructed game frame.
+adb shell screencap -p /sdcard/life-empire-initial.png
+adb pull /sdcard/life-empire-initial.png build/life-empire-initial.png
+DISPLAY_SIZE="$(adb shell wm size | awk '/Physical size|Override size/ {print $3}' | tail -1 | tr -d '\r')"
+SCREEN_W="${DISPLAY_SIZE%x*}"
+SCREEN_H="${DISPLAY_SIZE#*x}"
+if [[ "$SCREEN_W" =~ ^[0-9]+$ && "$SCREEN_H" =~ ^[0-9]+$ ]]; then
+  adb shell input tap "$((SCREEN_W * 72 / 100))" "$((SCREEN_H * 38 / 100))"
+fi
+sleep 4
+
 adb shell dumpsys activity activities > build/emulator-activities.txt 2>&1 || true
 adb shell dumpsys meminfo "$PACKAGE" > build/emulator-memory.txt 2>&1 || true
 adb shell screencap -p /sdcard/life-empire-screen.png
