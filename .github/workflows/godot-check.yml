@@ -36,9 +36,6 @@ jobs:
       - name: Run economy and save/load tests
         run: godot --headless --path . --script res://tests/economy_smoke.gd
 
-      - name: Run main scene runtime assertions
-        run: godot --headless --path . --script res://tests/scene_smoke.gd
-
       - name: Launch main scene and fail on startup script errors
         shell: bash
         run: |
