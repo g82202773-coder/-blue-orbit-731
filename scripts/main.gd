@@ -303,10 +303,19 @@ func _build_building(center: Vector3, size: Vector3, facade: Material, index: in
         for column in range(3):
             var wx := (float(column) - 1.0) * size.x * 0.29
             var wy := -size.y * 0.5 + 2.0 + float(row) * 3.2
-            window_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(wx, wy, -size.z * 0.5 - 0.08)))
-            window_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(wx, wy, size.z * 0.5 + 0.08)))
+            # Embed facade glazing slightly into the wall so it never appears to float.
+            window_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(wx, wy, -size.z * 0.5 - 0.045)))
+            window_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(wx, wy, size.z * 0.5 + 0.045)))
+            var wz := (float(column) - 1.0) * size.z * 0.29
+            var side_basis := Basis(Vector3.UP, PI * 0.5)
+            window_transforms.append(Transform3D(side_basis, center + Vector3(-size.x * 0.5 - 0.045, wy, wz)))
+            window_transforms.append(Transform3D(side_basis, center + Vector3(size.x * 0.5 + 0.045, wy, wz)))
         if row > 0:
-            trim_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(0.0, -size.y * 0.5 + 1.0 + float(row) * 3.2, -size.z * 0.5 - 0.08)))
+            var trim_y := -size.y * 0.5 + 1.0 + float(row) * 3.2
+            trim_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(0.0, trim_y, -size.z * 0.5 - 0.02)))
+            trim_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(0.0, trim_y, size.z * 0.5 + 0.02)))
+            trim_transforms.append(Transform3D(Basis(Vector3.UP, PI * 0.5), center + Vector3(-size.x * 0.5 - 0.02, trim_y, 0.0)))
+            trim_transforms.append(Transform3D(Basis(Vector3.UP, PI * 0.5), center + Vector3(size.x * 0.5 + 0.02, trim_y, 0.0)))
     if index % 4 == 0:
         _build_shop_front(body, size, index)
 
@@ -349,15 +358,15 @@ func _build_road_markings() -> void:
 
 func _build_shop_front(parent: Node3D, size: Vector3, index: int) -> void:
     var sign_color: Material = mats["red"] if index % 8 == 0 else mats["blue"]
-    _box_mesh(parent, Vector3(4.5, 0.72, 0.24), Vector3(0.0, -size.y * 0.5 + 1.65, -size.z * 0.5 - 0.18), sign_color, "ShopCanopy")
-    _box_mesh(parent, Vector3(2.7, 1.7, 0.10), Vector3(0.0, -size.y * 0.5 + 0.75, -size.z * 0.5 - 0.08), mats["glass"], "ShopfrontWindow")
+    _box_mesh(parent, Vector3(4.5, 0.72, 0.24), Vector3(0.0, -size.y * 0.5 + 1.65, -size.z * 0.5 - 0.08), sign_color, "ShopCanopy")
+    _box_mesh(parent, Vector3(2.7, 1.7, 0.10), Vector3(0.0, -size.y * 0.5 + 0.75, -size.z * 0.5 - 0.045), mats["glass"], "ShopfrontWindow")
     var sign := Label3D.new()
     var names := ["MARKET", "TEA HOUSE", "MOBILE HUB", "GROCERY"]
     sign.text = names[(index / 4) % names.size()]
     sign.font_size = 28
     sign.outline_size = 5
     sign.modulate = Color("#fff4d8")
-    sign.position = Vector3(0.0, -size.y * 0.5 + 1.75, -size.z * 0.5 - 0.33)
+    sign.position = Vector3(0.0, -size.y * 0.5 + 1.75, -size.z * 0.5 - 0.13)
     sign.pixel_size = 0.012
     parent.add_child(sign)
 
