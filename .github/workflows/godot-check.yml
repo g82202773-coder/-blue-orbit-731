@@ -23,11 +23,25 @@ jobs:
           version: 4.7-stable
           export-templates: false
 
-      - name: Import project and parse scripts
-        run: godot --headless --path . --editor --quit
+      - name: Import project and fail on script parse errors
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --editor --quit 2>&1 | tee import.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|Failed to load script" import.log; then
+            echo "Godot import reported script errors."
+            exit 1
+          fi
 
       - name: Run economy and save/load tests
         run: godot --headless --path . --script res://tests/economy_smoke.gd
 
-      - name: Launch main scene headlessly
-        run: godot --headless --path . --quit-after 120
+      - name: Launch main scene and fail on startup script errors
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --quit-after 120 2>&1 | tee startup.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|Failed to load script" startup.log; then
+            echo "Main scene reported script errors."
+            exit 1
+          fi
