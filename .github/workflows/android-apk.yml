@@ -74,8 +74,15 @@ jobs:
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey" >> "$GITHUB_ENV"
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
 
-      - name: Import project and validate scripts
-        run: godot --headless --editor --path . --quit
+      - name: Import project and fail on script parse errors
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --editor --path . --quit 2>&1 | tee import.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|Failed to load script" import.log; then
+            echo "Godot import reported script errors."
+            exit 1
+          fi
 
       - name: Run economy and persistence regression tests
         run: godot --headless --path . --script res://tests/economy_smoke.gd
