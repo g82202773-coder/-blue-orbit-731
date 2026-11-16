@@ -32,10 +32,12 @@ General workflow:
 - [ ] Project imports in Godot 4.7 without parser errors.
 - [ ] Main scene launches.
 - [ ] Player walks, runs and collides with buildings.
-- [ ] Player can enter and exit the starter car.
+- [ ] Player can enter and exit the starter car and purchased motorbike.
+- [ ] Car and motorbike position/type restore after app restart.
+- [ ] Fuel decreases during driving, reaches zero safely, and refuelling deducts ₹300 and restores 100%.
 - [ ] Car accelerates, brakes, reverses, steers and collides.
-- [ ] Delivery marker changes from pickup to drop-off.
-- [ ] Delivery reward is paid exactly once.
+- [ ] Each job-board mission changes markers from pickup to drop-off.
+- [ ] Each mission pays its configured reward exactly once and updates the completed-job counter.
 - [ ] Bank deposits and withdrawals preserve total cash.
 - [ ] Home and shop purchases deduct the correct amount.
 - [ ] Shop income accrues per in-game day and can be collected.
