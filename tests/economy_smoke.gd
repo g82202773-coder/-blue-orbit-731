@@ -22,6 +22,9 @@ func _initialize() -> void:
     assert(state.buy_home(), "Starter home purchase should succeed.")
     assert(state.home_owned and state.wallet == 1700, "Home purchase should deduct ₹3,000.")
     state.wallet = 5000
+    assert(state.buy_bike(), "Motorbike purchase should succeed.")
+    assert(state.bike_owned and state.wallet == 2500, "Motorbike purchase should deduct ₹2,500.")
+    state.wallet = 5000
     assert(state.buy_shop(), "Corner shop purchase should succeed.")
     assert(state.shop_owned and state.wallet == 1000, "Shop purchase should deduct ₹4,000.")
 
@@ -40,6 +43,7 @@ func _initialize() -> void:
     assert(restored.wallet == state.wallet, "Wallet should persist.")
     assert(restored.bank_balance == state.bank_balance, "Bank balance should persist.")
     assert(restored.home_owned and restored.shop_owned, "Owned assets should persist.")
+    assert(restored.bike_owned, "Motorbike ownership should persist.")
     assert(restored.day_number == state.day_number, "Day count should persist.")
     assert(restored.missions_completed == 1, "Mission completion count should persist.")
     print("LIFE EMPIRE economy and mission tests passed.")
