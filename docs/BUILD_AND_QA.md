@@ -44,4 +44,9 @@ General workflow:
 - [ ] Performance is measured on a 4 GB RAM Android device.
 
 ## Current verification status
-The source files have been committed to GitHub, but this environment does not currently have the Godot runtime or Android toolchain available. Therefore, parser validation, runtime gameplay testing, APK generation and physical-device performance testing are **not yet verified**. Do not treat this repository state as a tested APK.
+- **Godot 4.7 CI import and parse:** passed.
+- **Headless main-scene smoke run (120 frames):** passed.
+- The successful GitHub Actions run is [run #2](https://github.com/g82202773-coder/Life-Empire/actions/runs/43909523852), on commit `7c010f314170956a882312b9da7cab22ad8a203d`.
+- **Visual review, touch input on a phone, gameplay balancing, Android APK export, install test and 4 GB device performance:** not yet verified.
+
+A green headless check proves the project imports and the scene starts without a fatal startup error in that CI environment. It does not prove that every feature behaves correctly, that mobile controls feel good, or that the APK is ready for release.
