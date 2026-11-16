@@ -14,6 +14,7 @@ var day_number: int = 1
 var home_owned: bool = false
 var shop_owned: bool = false
 var bike_owned: bool = false
+var shop_employee_count: int = 0
 var uncollected_shop_income: int = 0
 var missions_completed: int = 0
 var fuel_percent: float = 100.0
@@ -145,6 +146,23 @@ func buy_shop() -> bool:
     toast_requested.emit("Your corner shop is open!")
     return true
 
+func hire_shop_employee() -> bool:
+    if not shop_owned:
+        toast_requested.emit("Buy the corner shop before hiring staff.")
+        return false
+    if shop_employee_count >= 3:
+        toast_requested.emit("Your shop is at its staff limit.")
+        return false
+    if wallet < 500:
+        toast_requested.emit("You need ₹500 to hire an employee.")
+        return false
+    wallet -= 500
+    shop_employee_count += 1
+    add_transaction("Hired shop employee • -₹500")
+    save_game()
+    toast_requested.emit("Employee hired. Daily shop income increased.")
+    return true
+
 func collect_shop_income() -> bool:
     if not shop_owned:
         toast_requested.emit("Purchase the corner shop first.")
@@ -164,7 +182,7 @@ func collect_shop_income() -> bool:
 func advance_day() -> void:
     day_number += 1
     if shop_owned:
-        uncollected_shop_income += 250
+        uncollected_shop_income += 250 + shop_employee_count * 100
     add_transaction("Started Day %d" % day_number)
     save_game()
     toast_requested.emit("Day %d started." % day_number)
@@ -192,6 +210,7 @@ func save_game() -> void:
         "home_owned": home_owned,
         "shop_owned": shop_owned,
         "bike_owned": bike_owned,
+        "shop_employee_count": shop_employee_count,
         "uncollected_shop_income": uncollected_shop_income,
         "missions_completed": missions_completed,
         "fuel_percent": fuel_percent,
@@ -238,6 +257,7 @@ func load_game() -> void:
     home_owned = bool(parsed.get("home_owned", parsed.get("property_owned", false)))
     shop_owned = bool(parsed.get("shop_owned", parsed.get("business_owned", false)))
     bike_owned = bool(parsed.get("bike_owned", false))
+    shop_employee_count = clampi(int(parsed.get("shop_employee_count", 0)), 0, 3)
     uncollected_shop_income = maxi(0, int(parsed.get("uncollected_shop_income", parsed.get("business_cashflow", 0))))
     missions_completed = maxi(0, int(parsed.get("missions_completed", 0)))
     fuel_percent = clampf(float(parsed.get("fuel_percent", 100.0)), 0.0, 100.0)
