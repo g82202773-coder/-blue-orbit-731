@@ -162,7 +162,7 @@ func _build_city() -> void:
             _box_mesh(self, Vector3(0.28, 0.22, CITY_EXTENT), Vector3(lane + side * 6.2, 0.08, 0.0), mats["sidewalk"], "RoadCurb")
         # Short dashed center markings, batched into one draw call later.
         for mark in range(-9, 10):
-            if absf(mark) % 2 == 1:
+            if abs(mark) % 2 == 1:
                 continue
             lane_transforms.append(Transform3D(Basis.IDENTITY, Vector3(float(mark) * 10.0, 0.09, lane)))
             lane_transforms.append(Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(lane, 0.09, float(mark) * 10.0)))
@@ -173,8 +173,8 @@ func _build_city() -> void:
     for road_z in [-80.0, -40.0, 0.0, 40.0, 80.0]:
         for side in [-1.0, 1.0]:
             for interval in blocks:
-                var length := interval[1] - interval[0]
-                var center := (interval[0] + interval[1]) * 0.5
+                var length: float = float(interval[1]) - float(interval[0])
+                var center: float = (float(interval[0]) + float(interval[1])) * 0.5
                 _box_mesh(self, Vector3(length, 0.14, 1.8), Vector3(center, 0.055, road_z + side * 6.9), mats["sidewalk"], "BlockSidewalk")
     for road_x in [-80.0, -40.0, 0.0, 40.0, 80.0]:
         for side in [-1.0, 1.0]:
@@ -317,7 +317,7 @@ func _build_road_markings() -> void:
     _create_multimesh_batch(zebra, mats["white"], crossings, "InstancedZebraCrossings")
 
 func _build_shop_front(parent: Node3D, size: Vector3, index: int) -> void:
-    var sign_color := mats["red"] if index % 8 == 0 else mats["blue"]
+    var sign_color: Material = mats["red"] if index % 8 == 0 else mats["blue"]
     _box_mesh(parent, Vector3(4.5, 0.72, 0.24), Vector3(0.0, -size.y * 0.5 + 1.65, -size.z * 0.5 - 0.18), sign_color, "ShopCanopy")
     _box_mesh(parent, Vector3(2.7, 1.7, 0.10), Vector3(0.0, -size.y * 0.5 + 0.75, -size.z * 0.5 - 0.08), mats["glass"], "ShopfrontWindow")
     var sign := Label3D.new()
