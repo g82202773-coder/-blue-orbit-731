@@ -37,6 +37,12 @@ func _initialize() -> void:
     assert(state.wallet == 1900, "Mission reward should increase wallet.")
     assert(state.missions_completed == 1, "Mission completion should increment the progression counter.")
 
+    state.fuel_percent = 35.0
+    assert(state.refuel_vehicle(), "Refuelling should succeed when the player has ₹300.")
+    assert(state.wallet == 1600 and is_equal_approx(state.fuel_percent, 100.0), "Refuelling should deduct ₹300 and restore full fuel.")
+    state.consume_fuel(12.5)
+    assert(is_equal_approx(state.fuel_percent, 87.5), "Driving should consume fuel without going negative.")
+
     state.set_player_position(Vector3(3.0, 1.0, 9.0))
     state.set_vehicle_state("motorbike", Vector3(12.0, 0.58, 24.0), 1.2, true)
     state.save_game()
@@ -53,5 +59,6 @@ func _initialize() -> void:
     assert(restored.bike_position.is_equal_approx(Vector3(12.0, 0.58, 24.0)), "Motorbike position should persist.")
     assert(is_equal_approx(restored.bike_rotation_y, 1.2), "Motorbike rotation should persist.")
     assert(restored.player_position.is_equal_approx(Vector3(3.0, 1.0, 9.0)), "Player position should persist.")
-    print("LIFE EMPIRE economy, mission and vehicle persistence tests passed.")
+    assert(is_equal_approx(restored.fuel_percent, 87.5), "Fuel level should persist.")
+    print("LIFE EMPIRE economy, mission, vehicle and fuel tests passed.")
     quit(0)
