@@ -377,30 +377,54 @@ func _build_player() -> void:
     collider.shape = capsule
     player.add_child(collider)
 
-    var body := MeshInstance3D.new()
-    var capsule_mesh := CapsuleMesh.new()
-    capsule_mesh.radius = 0.38
-    capsule_mesh.height = 1.8
-    body.mesh = capsule_mesh
-    body.material_override = mats["player"]
-    player.add_child(body)
+    # A readable, low-poly human silhouette instead of a single capsule.
+    _add_capsule_piece(player, 0.29, 1.02, Vector3(0.0, 0.22, 0.0), mats["player"], "Torso")
+    _box_mesh(player, Vector3(0.48, 0.28, 0.30), Vector3(0.0, -0.27, 0.0), mats["blue"], "Waist")
+    for side in [-1.0, 1.0]:
+        _add_capsule_piece(player, 0.13, 0.78, Vector3(side * 0.15, -0.63, 0.0), mats["dark"], "Leg")
+        _box_mesh(player, Vector3(0.22, 0.13, 0.36), Vector3(side * 0.15, -1.01, -0.05), mats["dark"], "Shoe")
+        var arm := _add_capsule_piece(player, 0.105, 0.72, Vector3(side * 0.36, 0.22, 0.0), mats["player"], "Arm")
+        arm.rotation.z = side * -0.12
 
     var head := MeshInstance3D.new()
     var head_mesh := SphereMesh.new()
-    head_mesh.radius = 0.23
-    head_mesh.height = 0.46
+    head_mesh.radius = 0.205
+    head_mesh.height = 0.41
     head.mesh = head_mesh
     head.position = Vector3(0.0, 0.93, 0.0)
     head.material_override = mats["skin"]
     player.add_child(head)
+    var hair := MeshInstance3D.new()
+    var hair_mesh := SphereMesh.new()
+    hair_mesh.radius = 0.21
+    hair_mesh.height = 0.22
+    hair.mesh = hair_mesh
+    hair.position = Vector3(0.0, 1.08, 0.0)
+    hair.material_override = mats["dark"]
+    player.add_child(hair)
     add_child(player)
 
     camera = Camera3D.new()
     camera.name = "FollowCamera"
     camera.position = player.global_position + Vector3(0.0, 5.0, 8.5)
     camera.current = true
+    camera.fov = 68.0
+    camera.near = 0.1
+    camera.far = 240.0
     add_child(camera)
     camera.look_at(player.global_position + Vector3(0.0, 1.0, 0.0), Vector3.UP)
+
+func _add_capsule_piece(parent: Node3D, radius: float, height: float, position: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+    var instance := MeshInstance3D.new()
+    instance.name = node_name
+    var capsule := CapsuleMesh.new()
+    capsule.radius = radius
+    capsule.height = height
+    instance.mesh = capsule
+    instance.position = position
+    instance.material_override = material
+    parent.add_child(instance)
+    return instance
 
 func _build_car() -> void:
     car = CharacterBody3D.new()
@@ -414,20 +438,42 @@ func _build_car() -> void:
     collider.shape = shape
     car.add_child(collider)
 
-    _box_mesh(car, Vector3(2.0, 0.72, 3.8), Vector3(0.0, 0.0, 0.0), mats["car"], "CarBody")
-    _box_mesh(car, Vector3(1.55, 0.7, 1.85), Vector3(0.0, 0.65, -0.15), mats["glass"], "Cabin")
+    # Sculpted body layers, glazing, lamps, grille and properly grounded wheels.
+    _box_mesh(car, Vector3(2.0, 0.66, 3.8), Vector3(0.0, 0.0, 0.0), mats["car"], "CarBody")
+    _box_mesh(car, Vector3(1.55, 0.68, 1.82), Vector3(0.0, 0.57, -0.10), mats["glass"], "Cabin")
+    _box_mesh(car, Vector3(1.70, 0.12, 0.95), Vector3(0.0, 0.36, -1.28), mats["car"], "Bonnet")
+    _box_mesh(car, Vector3(1.72, 0.12, 0.70), Vector3(0.0, 0.37, 1.45), mats["car"], "Boot")
+    _box_mesh(car, Vector3(2.04, 0.18, 0.18), Vector3(0.0, -0.21, -1.98), mats["dark"], "FrontBumper")
+    _box_mesh(car, Vector3(2.04, 0.18, 0.18), Vector3(0.0, -0.21, 1.98), mats["dark"], "RearBumper")
+    _box_mesh(car, Vector3(0.72, 0.18, 0.07), Vector3(0.0, -0.02, -2.015), mats["dark"], "FrontGrille")
+    for x in [-0.68, 0.68]:
+        _box_mesh(car, Vector3(0.38, 0.20, 0.07), Vector3(x, 0.12, -2.02), mats["yellow"], "HeadLamp")
+        _box_mesh(car, Vector3(0.34, 0.18, 0.07), Vector3(x, 0.10, 2.02), mats["red"], "TailLamp")
+        _box_mesh(car, Vector3(0.08, 0.12, 0.32), Vector3(x * 1.42, 0.44, -0.48), mats["dark"], "SideMirror")
+        _box_mesh(car, Vector3(0.10, 0.08, 0.36), Vector3(x * 1.01, 0.05, 0.25), mats["white"], "DoorHandle")
+    _box_mesh(car, Vector3(1.36, 0.08, 0.08), Vector3(0.0, 0.91, -0.16), mats["dark"], "RoofTrim")
     for x in [-0.94, 0.94]:
         for z in [-1.25, 1.25]:
             var wheel := MeshInstance3D.new()
             var wheel_mesh := CylinderMesh.new()
             wheel_mesh.top_radius = 0.36
             wheel_mesh.bottom_radius = 0.36
-            wheel_mesh.height = 0.24
+            wheel_mesh.height = 0.27
             wheel.mesh = wheel_mesh
             wheel.rotation_degrees.z = 90.0
-            wheel.position = Vector3(x, -0.03, z)
+            wheel.position = Vector3(x, -0.34, z)
             wheel.material_override = mats["dark"]
             car.add_child(wheel)
+            var hub := MeshInstance3D.new()
+            var hub_mesh := CylinderMesh.new()
+            hub_mesh.top_radius = 0.16
+            hub_mesh.bottom_radius = 0.16
+            hub_mesh.height = 0.285
+            hub.mesh = hub_mesh
+            hub.rotation_degrees.z = 90.0
+            hub.position = Vector3(x * 1.01, -0.34, z)
+            hub.material_override = mats["white"]
+            car.add_child(hub)
     add_child(car)
 
 func _build_job_markers() -> void:
