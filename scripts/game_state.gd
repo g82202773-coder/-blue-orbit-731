@@ -14,7 +14,8 @@ var day_number: int = 1
 var home_owned: bool = false
 var shop_owned: bool = false
 var uncollected_shop_income: int = 0
-var player_position: Vector3 = Vector3(0.0, 0.0, 8.0)
+var missions_completed: int = 0
+var player_position: Vector3 = Vector3(0.0, 0.0, 5.4)
 var transactions: Array[String] = []
 
 func _ready() -> void:
@@ -65,6 +66,13 @@ func earn(amount: int, reason: String) -> void:
     add_transaction("%s +₹%d" % [reason, amount])
     save_game()
     toast_requested.emit("You earned ₹%d." % amount)
+
+func complete_mission(amount: int, mission_name: String) -> void:
+    if amount <= 0:
+        return
+    missions_completed += 1
+    earn(amount, "%s completed" % mission_name)
+    save_game()
 
 func buy_home() -> bool:
     if home_owned:
@@ -131,6 +139,7 @@ func save_game() -> void:
         "home_owned": home_owned,
         "shop_owned": shop_owned,
         "uncollected_shop_income": uncollected_shop_income,
+        "missions_completed": missions_completed,
         "player_x": player_position.x,
         "player_y": player_position.y,
         "player_z": player_position.z,
@@ -164,6 +173,7 @@ func load_game() -> void:
     home_owned = bool(parsed.get("home_owned", parsed.get("property_owned", false)))
     shop_owned = bool(parsed.get("shop_owned", parsed.get("business_owned", false)))
     uncollected_shop_income = maxi(0, int(parsed.get("uncollected_shop_income", parsed.get("business_cashflow", 0))))
+    missions_completed = maxi(0, int(parsed.get("missions_completed", 0)))
     player_position = Vector3(
         float(parsed.get("player_x", 0.0)),
         float(parsed.get("player_y", 0.0)),
