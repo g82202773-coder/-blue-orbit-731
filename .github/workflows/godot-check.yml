@@ -26,5 +26,8 @@ jobs:
       - name: Import project and parse scripts
         run: godot --headless --path . --editor --quit
 
+      - name: Run economy and save/load tests
+        run: godot --headless --path . --script res://tests/economy_smoke.gd
+
       - name: Launch main scene headlessly
         run: godot --headless --path . --quit-after 120
