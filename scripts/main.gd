@@ -169,11 +169,11 @@ func _build_building(center: Vector3, size: Vector3, facade: Material, index: in
     add_child(body)
 
     # A restrained set of repeated windows keeps draw calls and geometry modest.
-    var window_rows := int(size.y / 3.1)
-    for row in range(mini(window_rows, 4)):
-        for column in range(3):
-            var wx := (float(column) - 1.0) * size.x * 0.27
-            var wy := -size.y * 0.5 + 2.0 + float(row) * 2.8
+    var window_rows := int(size.y / 3.6)
+    for row in range(mini(window_rows, 3)):
+        for column in range(2):
+            var wx := (float(column) - 0.5) * size.x * 0.38
+            var wy := -size.y * 0.5 + 2.0 + float(row) * 3.0
             _box_mesh(body, Vector3(1.5, 1.0, 0.08), Vector3(wx, wy, -size.z * 0.5 - 0.045), mats["glass"], "Window")
     if index % 4 == 0:
         _box_mesh(body, Vector3(4.0, 1.0, 0.16), Vector3(0.0, -size.y * 0.5 + 1.1, -size.z * 0.5 - 0.09), mats["red"], "ShopSign")
@@ -568,6 +568,8 @@ func _interact() -> void:
     if player.global_position.distance_to(car.global_position) <= 5.0:
         driving = true
         player.hide()
+        player.collision_layer = 0
+        player.collision_mask = 0
         car_speed = 0.0
         _show_toast("You entered your car. Use ACCEL and BRAKE.")
     else:
@@ -578,6 +580,8 @@ func _exit_car() -> void:
         return
     driving = false
     player.show()
+    player.collision_layer = 1
+    player.collision_mask = 1
     player.global_position = car.global_position + car.global_basis.x * 2.4 + Vector3(0.0, 0.35, 0.0)
     player.velocity = Vector3.ZERO
     car_speed = 0.0
