@@ -463,6 +463,10 @@ func _add_title(parent: Node, title_text: String) -> void:
 func _physics_process(delta: float) -> void:
     if player == null or car == null:
         return
+    if Input.is_action_just_pressed("interact"):
+        _interact()
+    if Input.is_action_just_pressed("ui_cancel"):
+        _hide_panels()
     if driving:
         _drive_car(delta)
     else:
@@ -511,7 +515,7 @@ func _drive_car(delta: float) -> void:
         car_speed = move_toward(car_speed, 0.0, 4.0 * delta)
 
     var keyboard_steer := float(Input.is_action_pressed("move_right")) - float(Input.is_action_pressed("move_left"))
-    var steer := steer_touch if absf(steer_touch) > 0.01 else keyboard_steer
+    var steer := steer_touch if absf(steer_touch) > 0.01 else (move_touch.x if absf(move_touch.x) > 0.01 else keyboard_steer)
     if absf(car_speed) > 0.25:
         car.rotate_y(-steer * delta * 1.15 * clampf(absf(car_speed) / 5.0, 0.2, 1.0) * signf(car_speed))
     var forward := -car.global_basis.z
