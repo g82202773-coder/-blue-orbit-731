@@ -44,9 +44,10 @@ General workflow:
 - [ ] Performance is measured on a 4 GB RAM Android device.
 
 ## Current verification status
-- **Godot 4.7 CI import and parse:** passed.
+- **Godot 4.7 CI import and GDScript parse:** passed.
+- **Economy regression tests:** passed for deposit, withdrawal, property/shop purchase, daily income, income collection, and save/load restoration.
 - **Headless main-scene smoke run (120 frames):** passed.
-- The successful GitHub Actions run is [run #2](https://github.com/g82202773-coder/Life-Empire/actions/runs/43909523852), on commit `7c010f314170956a882312b9da7cab22ad8a203d`.
+- Latest successful GitHub Actions run: [run #6](https://github.com/g82202773-coder/Life-Empire/actions/runs/43910323729), on commit `48e6e161f6f3d628953d5f72997138e13c35f077`.
 - **Visual review, touch input on a phone, gameplay balancing, Android APK export, install test and 4 GB device performance:** not yet verified.
 
-A green headless check proves the project imports and the scene starts without a fatal startup error in that CI environment. It does not prove that every feature behaves correctly, that mobile controls feel good, or that the APK is ready for release.
+The CI result proves scripts import and parse, the economy smoke checks pass, and the main scene starts in the headless CI environment. It does not prove that every feature behaves correctly in a rendered game, that mobile controls feel good, or that the APK is ready for release.
