@@ -16,7 +16,11 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Landscape orientation; 1280x720 logical viewport
 
 ## Current playable foundation
-- Procedurally generated Navapura city sector with connected roads, buildings, sidewalks and trees.
+- Procedurally generated Navapura city sector with connected roads, junction-separated sidewalks, lane dashes, zebra crossings, storefronts, facade windows, streetlights and trees.
+- GPU-instanced repeated facade windows and road markings to reduce draw-call overhead.
+- More detailed low-poly player and starter-car models.
+- Responsive landscape HUD that repositions for ultrawide Android screens.
+- 60 FPS ceiling with adaptive 3D resolution scaling and an on-screen FPS/scale monitor.
 - Third-person on-foot movement, walking/running, and touch D-pad controls.
 - Enterable arcade-style starter car with acceleration, braking, reverse and steering.
 - Three lightweight moving traffic cars and four looping pedestrians.
