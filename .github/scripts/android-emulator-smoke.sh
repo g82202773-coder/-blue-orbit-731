@@ -46,7 +46,15 @@ DISPLAY_SIZE="$(adb shell wm size | awk '/Physical size|Override size/ {print $3
 SCREEN_W="${DISPLAY_SIZE%x*}"
 SCREEN_H="${DISPLAY_SIZE#*x}"
 if [[ "$SCREEN_W" =~ ^[0-9]+$ && "$SCREEN_H" =~ ^[0-9]+$ ]]; then
-  adb shell input tap "$((SCREEN_W * 72 / 100))" "$((SCREEN_H * 38 / 100))"
+  # wm size may report portrait physical dimensions while the full-screen game
+  # rotates the captured display to landscape.
+  if (( SCREEN_W < SCREEN_H )); then
+    TEMP="$SCREEN_W"
+    SCREEN_W="$SCREEN_H"
+    SCREEN_H="$TEMP"
+  fi
+  # "Got it" sits near the middle-right of Android's immersive-mode dialog.
+  adb shell input tap "$((SCREEN_W * 56 / 100))" "$((SCREEN_H * 38 / 100))"
 fi
 sleep 4
 
