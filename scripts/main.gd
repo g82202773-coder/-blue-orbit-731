@@ -386,7 +386,7 @@ func _build_street_sign(position: Vector3, label_text: String) -> void:
 func _build_player() -> void:
     player = CharacterBody3D.new()
     player.name = "Player"
-    player.position = Vector3(0.0, 1.0, 12.0)
+    player.position = Vector3(0.0, 1.0, 5.4)
     player.floor_snap_length = 0.25
 
     var collider := CollisionShape3D.new()
@@ -448,7 +448,7 @@ func _add_capsule_piece(parent: Node3D, radius: float, height: float, position: 
 func _build_car() -> void:
     car = CharacterBody3D.new()
     car.name = "StarterCar"
-    car.position = Vector3(4.0, 0.72, 12.0)
+    car.position = Vector3(0.0, 0.72, 0.0)
     car.floor_snap_length = 0.25
 
     var collider := CollisionShape3D.new()
@@ -497,9 +497,9 @@ func _build_car() -> void:
 
 func _build_job_markers() -> void:
     pickup_marker = _make_marker(mats["yellow"])
-    pickup_marker.position = Vector3(0.0, 0.85, -28.0)
+    pickup_marker.position = Vector3(-16.0, 0.85, 0.0)
     drop_marker = _make_marker(mats["green"])
-    drop_marker.position = Vector3(0.0, 0.85, 12.0)
+    drop_marker.position = Vector3(0.0, 0.85, 40.0)
     add_child(pickup_marker)
     add_child(drop_marker)
     pickup_marker.hide()
