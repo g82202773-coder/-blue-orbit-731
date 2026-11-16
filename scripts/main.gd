@@ -74,9 +74,26 @@ func _ready() -> void:
         _build_bike()
     _build_job_markers()
     _build_hud()
+    car.global_position = GameState.car_position
+    car.rotation.y = GameState.car_rotation_y
+    if is_instance_valid(bike):
+        bike.global_position = GameState.bike_position
+        bike.rotation.y = GameState.bike_rotation_y
     player.global_position = GameState.player_position
     if player.global_position.y < 0.8:
         player.global_position.y = 1.0
+    if GameState.was_driving:
+        active_vehicle_kind = GameState.active_vehicle_kind
+        if active_vehicle_kind == "motorbike" and is_instance_valid(bike):
+            active_vehicle = bike
+        else:
+            active_vehicle_kind = "car"
+            active_vehicle = car
+        driving = true
+        player.global_position = active_vehicle.global_position + Vector3(0.0, 0.1, 0.0)
+        player.hide()
+        player.collision_layer = 0
+        player.collision_mask = 0
     _refresh_ui()
     _show_toast("Welcome to Navapura. Start a delivery and build your empire.")
 
@@ -800,7 +817,7 @@ func _physics_process(delta: float) -> void:
         return
     autosave_time -= delta
     if autosave_time <= 0.0:
-        GameState.set_player_position(player.global_position)
+        _sync_save_state()
         GameState.save_game()
         autosave_time = 20.0
     if Input.is_action_just_pressed("interact"):
@@ -905,6 +922,7 @@ func _drive_car(delta: float) -> void:
     active_vehicle.move_and_slide()
     player.global_position = active_vehicle.global_position + Vector3(0.0, 0.1, 0.0)
     GameState.set_player_position(player.global_position)
+    GameState.set_vehicle_state(active_vehicle_kind, active_vehicle.global_position, active_vehicle.rotation.y, true)
 
 func _update_camera(delta: float) -> void:
     var focus := active_vehicle.global_position if driving and is_instance_valid(active_vehicle) else player.global_position
@@ -999,6 +1017,7 @@ func _interact() -> void:
         player.collision_layer = 0
         player.collision_mask = 0
         car_speed = 0.0
+        GameState.set_vehicle_state(active_vehicle_kind, active_vehicle.global_position, active_vehicle.rotation.y, true)
         _show_toast("You entered your %s. Use ACCEL and BRAKE." % vehicle_kind)
         _refresh_ui()
     else:
@@ -1016,6 +1035,8 @@ func _exit_car() -> void:
     player.collision_mask = 1
     player.velocity = Vector3.ZERO
     car_speed = 0.0
+    if is_instance_valid(active_vehicle):
+        GameState.set_vehicle_state(active_vehicle_kind, active_vehicle.global_position, active_vehicle.rotation.y, false)
     _show_toast("You left the %s." % active_vehicle_kind)
     active_vehicle = null
     _refresh_ui()
@@ -1061,8 +1082,16 @@ func _collect_shop() -> void:
 func _next_day() -> void:
     GameState.advance_day()
 
+func _sync_save_state() -> void:
+    if is_instance_valid(player):
+        GameState.set_player_position(player.global_position)
+    if driving and is_instance_valid(active_vehicle):
+        GameState.set_vehicle_state(active_vehicle_kind, active_vehicle.global_position, active_vehicle.rotation.y, true)
+    else:
+        GameState.was_driving = false
+
 func _save_now() -> void:
-    GameState.set_player_position(player.global_position)
+    _sync_save_state()
     GameState.save_game()
     _show_toast("Game saved on this device.")
 
@@ -1106,5 +1135,5 @@ func _show_toast(message: String) -> void:
 
 func _notification(what: int) -> void:
     if (what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED) and is_instance_valid(player):
-        GameState.set_player_position(player.global_position)
+        _sync_save_state()
         GameState.save_game()
