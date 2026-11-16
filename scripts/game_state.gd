@@ -16,6 +16,7 @@ var shop_owned: bool = false
 var bike_owned: bool = false
 var uncollected_shop_income: int = 0
 var missions_completed: int = 0
+var fuel_percent: float = 100.0
 var player_position: Vector3 = Vector3(0.0, 0.0, 4.5)
 var car_position: Vector3 = Vector3(0.0, 0.72, 0.0)
 var car_rotation_y: float = 0.0
@@ -82,6 +83,25 @@ func complete_mission(amount: int, mission_name: String) -> void:
     missions_completed += 1
     earn(amount, "%s completed" % mission_name)
     save_game()
+
+func consume_fuel(amount: float) -> void:
+    if amount <= 0.0:
+        return
+    fuel_percent = clampf(fuel_percent - amount, 0.0, 100.0)
+
+func refuel_vehicle() -> bool:
+    if fuel_percent >= 99.9:
+        toast_requested.emit("Your vehicle tank is already full.")
+        return false
+    if wallet < 300:
+        toast_requested.emit("You need ₹300 to refuel.")
+        return false
+    wallet -= 300
+    fuel_percent = 100.0
+    add_transaction("Vehicle refuel • -₹300")
+    save_game()
+    toast_requested.emit("Vehicle refuelled to 100%.")
+    return true
 
 func buy_home() -> bool:
     if home_owned:
@@ -174,6 +194,7 @@ func save_game() -> void:
         "bike_owned": bike_owned,
         "uncollected_shop_income": uncollected_shop_income,
         "missions_completed": missions_completed,
+        "fuel_percent": fuel_percent,
         "player_x": player_position.x,
         "player_y": player_position.y,
         "player_z": player_position.z,
@@ -219,6 +240,7 @@ func load_game() -> void:
     bike_owned = bool(parsed.get("bike_owned", false))
     uncollected_shop_income = maxi(0, int(parsed.get("uncollected_shop_income", parsed.get("business_cashflow", 0))))
     missions_completed = maxi(0, int(parsed.get("missions_completed", 0)))
+    fuel_percent = clampf(float(parsed.get("fuel_percent", 100.0)), 0.0, 100.0)
     player_position = Vector3(
         float(parsed.get("player_x", 0.0)),
         float(parsed.get("player_y", 0.0)),
