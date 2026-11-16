@@ -16,6 +16,10 @@ var lane_transforms: Array[Transform3D] = []
 var crosswalk_transforms: Array[Transform3D] = []
 var player: CharacterBody3D
 var car: CharacterBody3D
+var bike: CharacterBody3D
+var active_vehicle: CharacterBody3D
+var active_vehicle_kind := "car"
+var bike_button: Button
 var camera: Camera3D
 var pickup_marker: Node3D
 var drop_marker: Node3D
@@ -66,6 +70,8 @@ func _ready() -> void:
     _build_city()
     _build_player()
     _build_car()
+    if GameState.bike_owned:
+        _build_bike()
     _build_job_markers()
     _build_hud()
     player.global_position = GameState.player_position
@@ -390,7 +396,7 @@ func _build_street_sign(position: Vector3, label_text: String) -> void:
 func _build_player() -> void:
     player = CharacterBody3D.new()
     player.name = "Player"
-    player.position = Vector3(0.0, 1.0, 5.4)
+    player.position = Vector3(0.0, 1.0, 4.5)
     player.floor_snap_length = 0.25
 
     var collider := CollisionShape3D.new()
@@ -498,6 +504,66 @@ func _build_car() -> void:
             hub.material_override = mats["white"]
             car.add_child(hub)
     add_child(car)
+
+func _build_bike() -> void:
+    if is_instance_valid(bike):
+        return
+    bike = CharacterBody3D.new()
+    bike.name = "StarterMotorbike"
+    bike.position = Vector3(6.0, 0.58, 0.0)
+    bike.floor_snap_length = 0.25
+
+    var collider := CollisionShape3D.new()
+    var shape := BoxShape3D.new()
+    shape.size = Vector3(0.88, 0.95, 2.25)
+    collider.shape = shape
+    bike.add_child(collider)
+
+    # Low-poly commuter motorcycle with separate wheels, frame, tank and cockpit.
+    for wheel_z in [-0.88, 0.88]:
+        var wheel := MeshInstance3D.new()
+        var wheel_mesh := TorusMesh.new()
+        wheel_mesh.inner_radius = 0.29
+        wheel_mesh.outer_radius = 0.43
+        wheel_mesh.rings = 8
+        wheel_mesh.ring_segments = 12
+        wheel.mesh = wheel_mesh
+        wheel.rotation_degrees.y = 90.0
+        wheel.position = Vector3(0.0, -0.12, wheel_z)
+        wheel.material_override = mats["dark"]
+        bike.add_child(wheel)
+
+        var hub := MeshInstance3D.new()
+        var hub_mesh := CylinderMesh.new()
+        hub_mesh.top_radius = 0.12
+        hub_mesh.bottom_radius = 0.12
+        hub_mesh.height = 0.22
+        hub.mesh = hub_mesh
+        hub.rotation_degrees.z = 90.0
+        hub.position = Vector3(0.0, -0.12, wheel_z)
+        hub.material_override = mats["white"]
+        bike.add_child(hub)
+
+    _box_mesh(bike, Vector3(0.20, 0.20, 1.30), Vector3(0.0, 0.12, 0.0), mats["red"], "BikeFrame")
+    _box_mesh(bike, Vector3(0.48, 0.42, 0.48), Vector3(0.0, -0.14, 0.12), mats["dark"], "Engine")
+    _box_mesh(bike, Vector3(0.42, 0.16, 0.62), Vector3(0.0, 0.48, 0.48), mats["dark"], "Seat")
+    _box_mesh(bike, Vector3(0.52, 0.42, 0.70), Vector3(0.0, 0.43, -0.18), mats["yellow"], "FuelTank")
+    _box_mesh(bike, Vector3(0.12, 0.80, 0.12), Vector3(0.0, 0.28, -0.78), mats["white"], "FrontFork")
+    _box_mesh(bike, Vector3(1.0, 0.08, 0.10), Vector3(0.0, 0.78, -0.84), mats["dark"], "Handlebar")
+    _box_mesh(bike, Vector3(0.24, 0.22, 0.18), Vector3(0.0, 0.65, -0.91), mats["yellow"], "Headlight")
+    _box_mesh(bike, Vector3(0.15, 0.12, 0.12), Vector3(0.0, 0.48, 0.96), mats["red"], "RearLight")
+
+    var exhaust := MeshInstance3D.new()
+    var exhaust_mesh := CylinderMesh.new()
+    exhaust_mesh.top_radius = 0.07
+    exhaust_mesh.bottom_radius = 0.07
+    exhaust_mesh.height = 0.88
+    exhaust.mesh = exhaust_mesh
+    exhaust.rotation_degrees.x = 90.0
+    exhaust.position = Vector3(0.34, -0.25, 0.42)
+    exhaust.material_override = mats["white"]
+    bike.add_child(exhaust)
+    add_child(bike)
 
 func _build_job_markers() -> void:
     pickup_marker = _make_marker(mats["yellow"])
