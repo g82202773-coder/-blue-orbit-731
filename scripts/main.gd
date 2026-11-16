@@ -46,6 +46,10 @@ var left_pad: PanelContainer
 var right_pad: PanelContainer
 
 func _ready() -> void:
+    # Target stable 30 FPS on baseline Android hardware. Render the 3D world
+    # slightly below native resolution while keeping all HUD elements crisp.
+    Engine.max_fps = 30
+    get_viewport().scaling_3d_scale = 0.85
     GameState.state_changed.connect(_refresh_ui)
     GameState.toast_requested.connect(_show_toast)
     _create_materials()
@@ -158,11 +162,21 @@ func _build_city() -> void:
             lane_transforms.append(Transform3D(Basis.IDENTITY, Vector3(float(mark) * 10.0, 0.09, lane)))
             lane_transforms.append(Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(lane, 0.09, float(mark) * 10.0)))
 
-    # Sidewalk strips around the main blocks.
-    for z in [-73.0, -47.0, -33.0, -7.0, 7.0, 33.0, 47.0, 73.0]:
-        _box_mesh(self, Vector3(CITY_EXTENT, 0.18, 2.2), Vector3(0.0, 0.02, z), mats["sidewalk"], "Sidewalk")
-    for x in [-73.0, -47.0, -33.0, -7.0, 7.0, 33.0, 47.0, 73.0]:
-        _box_mesh(self, Vector3(2.2, 0.18, CITY_EXTENT), Vector3(x, 0.02, 0.0), mats["sidewalk"], "Sidewalk")
+    # Sidewalks are split at junctions, so pavement never forms long slabs
+    # across a perpendicular road.
+    var blocks := [[-108.0, -86.0], [-74.0, -46.0], [-34.0, -6.0], [6.0, 34.0], [46.0, 74.0], [86.0, 108.0]]
+    for road_z in [-80.0, -40.0, 0.0, 40.0, 80.0]:
+        for side in [-1.0, 1.0]:
+            for interval in blocks:
+                var length := interval[1] - interval[0]
+                var center := (interval[0] + interval[1]) * 0.5
+                _box_mesh(self, Vector3(length, 0.14, 1.8), Vector3(center, 0.055, road_z + side * 6.9), mats["sidewalk"], "BlockSidewalk")
+    for road_x in [-80.0, -40.0, 0.0, 40.0, 80.0]:
+        for side in [-1.0, 1.0]:
+            for interval in blocks:
+                var length := interval[1] - interval[0]
+                var center := (interval[0] + interval[1]) * 0.5
+                _box_mesh(self, Vector3(1.8, 0.14, length), Vector3(road_x + side * 6.9, 0.055, center), mats["sidewalk"], "BlockSidewalk")
 
     var palettes: Array[Material] = [mats["cream"], mats["blue"], mats["brick"], mats["concrete"]]
     var index := 0
@@ -501,12 +515,12 @@ func _build_hud() -> void:
     hud_layer = CanvasLayer.new()
     add_child(hud_layer)
 
-    var status := PanelContainer.new()
-    status.position = Vector2(18.0, 16.0)
-    status.add_theme_stylebox_override("panel", _panel_style(Color(0.04, 0.07, 0.10, 0.88)))
-    hud_layer.add_child(status)
+    status_panel = PanelContainer.new()
+    status_panel.position = Vector2(18.0, 16.0)
+    status_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.04, 0.07, 0.10, 0.88)))
+    hud_layer.add_child(status_panel)
     var status_box := VBoxContainer.new()
-    status.add_child(status_box)
+    status_panel.add_child(status_box)
     wallet_label = Label.new()
     wallet_label.add_theme_font_size_override("font_size", 21)
     status_box.add_child(wallet_label)
@@ -514,7 +528,7 @@ func _build_hud() -> void:
     location_label.text = "NAVAPURA • ON FOOT"
     status_box.add_child(location_label)
 
-    var top_buttons := HBoxContainer.new()
+    top_buttons = HBoxContainer.new()
     top_buttons.position = Vector2(410.0, 18.0)
     top_buttons.add_theme_constant_override("separation", 8)
     hud_layer.add_child(top_buttons)
@@ -533,6 +547,27 @@ func _build_hud() -> void:
 
     _build_panels()
     _build_touch_controls()
+    get_viewport().size_changed.connect(_layout_hud)
+    call_deferred("_layout_hud")
+
+func _layout_hud() -> void:
+    if not is_instance_valid(hud_layer):
+        return
+    var view_size := get_viewport().get_visible_rect().size
+    var left_size := left_pad.get_combined_minimum_size()
+    var right_size := right_pad.get_combined_minimum_size()
+    var top_size := top_buttons.get_combined_minimum_size()
+    status_panel.position = Vector2(16.0, 14.0)
+    top_buttons.position = Vector2(maxf(status_panel.get_combined_minimum_size().x + 22.0, (view_size.x - top_size.x) * 0.5), 16.0)
+    left_pad.position = Vector2(18.0, maxf(12.0, view_size.y - left_size.y - 16.0))
+    right_pad.position = Vector2(maxf(12.0, view_size.x - right_size.x - 18.0), maxf(12.0, view_size.y - right_size.y - 16.0))
+    toast_label.position = Vector2(maxf(12.0, (view_size.x - toast_label.custom_minimum_size.x) * 0.5), 82.0)
+    var bank_size := bank_panel.get_combined_minimum_size()
+    var phone_size := phone_panel.get_combined_minimum_size()
+    var empire_size := empire_panel.get_combined_minimum_size()
+    bank_panel.position = (view_size - bank_size) * 0.5
+    phone_panel.position = (view_size - phone_size) * 0.5
+    empire_panel.position = (view_size - empire_size) * 0.5
 
 func _panel_style(color: Color) -> StyleBoxFlat:
     var style := StyleBoxFlat.new()
@@ -564,7 +599,7 @@ func _add_hold_button(parent: Node, text_value: String, down_action: Callable, u
     return button
 
 func _build_touch_controls() -> void:
-    var left_pad := PanelContainer.new()
+    left_pad = PanelContainer.new()
     left_pad.position = Vector2(20.0, 510.0)
     left_pad.add_theme_stylebox_override("panel", _panel_style(Color(0.04, 0.07, 0.10, 0.62)))
     hud_layer.add_child(left_pad)
@@ -581,7 +616,7 @@ func _build_touch_controls() -> void:
     _add_hold_button(dpad, "▶", func(): _set_move_x(1.0), func(): _set_move_x(0.0), 66.0)
     _add_hold_button(dpad, "RUN", func(): run_touch = true, func(): run_touch = false, 66.0)
 
-    var right_pad := PanelContainer.new()
+    right_pad = PanelContainer.new()
     right_pad.position = Vector2(1010.0, 500.0)
     right_pad.add_theme_stylebox_override("panel", _panel_style(Color(0.04, 0.07, 0.10, 0.62)))
     hud_layer.add_child(right_pad)
