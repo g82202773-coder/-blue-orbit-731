@@ -29,10 +29,15 @@ var steer_touch := 0.0
 var job_stage := 0
 var toast_time := 0.0
 var autosave_time := 20.0
+var performance_check_time := 0.0
+var low_fps_samples := 0
+var high_fps_samples := 0
+var perf_display_time := 0.0
 
 var hud_layer: CanvasLayer
 var wallet_label: Label
 var location_label: Label
+var perf_label: Label
 var toast_label: Label
 var bank_panel: PanelContainer
 var phone_panel: PanelContainer
@@ -48,8 +53,8 @@ var right_pad: PanelContainer
 func _ready() -> void:
     # Target stable 30 FPS on baseline Android hardware. Render the 3D world
     # slightly below native resolution while keeping all HUD elements crisp.
-    Engine.max_fps = 30
-    get_viewport().scaling_3d_scale = 0.85
+    Engine.max_fps = 60
+    get_viewport().scaling_3d_scale = 0.80
     GameState.state_changed.connect(_refresh_ui)
     GameState.toast_requested.connect(_show_toast)
     _create_materials()
@@ -527,6 +532,10 @@ func _build_hud() -> void:
     location_label = Label.new()
     location_label.text = "NAVAPURA • ON FOOT"
     status_box.add_child(location_label)
+    perf_label = Label.new()
+    perf_label.add_theme_font_size_override("font_size", 12)
+    perf_label.modulate = Color("#d2dce2")
+    status_box.add_child(perf_label)
 
     top_buttons = HBoxContainer.new()
     top_buttons.position = Vector2(410.0, 18.0)
@@ -707,6 +716,7 @@ func _physics_process(delta: float) -> void:
         _interact()
     if Input.is_action_just_pressed("ui_cancel"):
         _hide_panels()
+    _update_performance(delta)
     if driving:
         _drive_car(delta)
     else:
@@ -717,6 +727,34 @@ func _physics_process(delta: float) -> void:
         toast_time -= delta
         if toast_time <= 0.0 and is_instance_valid(toast_label):
             toast_label.text = ""
+
+func _update_performance(delta: float) -> void:
+    performance_check_time += delta
+    perf_display_time += delta
+    if perf_display_time >= 1.0 and is_instance_valid(perf_label):
+        var scale_percent := int(round(get_viewport().scaling_3d_scale * 100.0))
+        perf_label.text = "FPS %d  •  3D %d%%" % [Engine.get_frames_per_second(), scale_percent]
+        perf_display_time = 0.0
+    if performance_check_time < 2.0:
+        return
+    performance_check_time = 0.0
+    var fps := Engine.get_frames_per_second()
+    var viewport := get_viewport()
+    if fps < 42:
+        low_fps_samples += 1
+        high_fps_samples = 0
+        if low_fps_samples >= 2 and viewport.scaling_3d_scale > 0.65:
+            viewport.scaling_3d_scale = maxf(0.65, viewport.scaling_3d_scale - 0.05)
+            low_fps_samples = 0
+    elif fps > 56:
+        high_fps_samples += 1
+        low_fps_samples = 0
+        if high_fps_samples >= 5 and viewport.scaling_3d_scale < 0.85:
+            viewport.scaling_3d_scale = minf(0.85, viewport.scaling_3d_scale + 0.05)
+            high_fps_samples = 0
+    else:
+        low_fps_samples = 0
+        high_fps_samples = 0
 
 func _move_player(delta: float) -> void:
     var keyboard := Vector2(
