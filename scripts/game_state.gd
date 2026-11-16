@@ -16,7 +16,13 @@ var shop_owned: bool = false
 var bike_owned: bool = false
 var uncollected_shop_income: int = 0
 var missions_completed: int = 0
-var player_position: Vector3 = Vector3(0.0, 0.0, 5.4)
+var player_position: Vector3 = Vector3(0.0, 0.0, 4.5)
+var car_position: Vector3 = Vector3(0.0, 0.72, 0.0)
+var car_rotation_y: float = 0.0
+var bike_position: Vector3 = Vector3(6.0, 0.58, 0.0)
+var bike_rotation_y: float = 0.0
+var was_driving: bool = false
+var active_vehicle_kind: String = "car"
 var transactions: Array[String] = []
 
 func _ready() -> void:
@@ -146,6 +152,16 @@ func advance_day() -> void:
 func set_player_position(position: Vector3) -> void:
     player_position = position
 
+func set_vehicle_state(kind: String, position: Vector3, rotation_y: float, is_driving: bool) -> void:
+    active_vehicle_kind = kind
+    was_driving = is_driving
+    if kind == "motorbike":
+        bike_position = position
+        bike_rotation_y = rotation_y
+    else:
+        car_position = position
+        car_rotation_y = rotation_y
+
 func save_game() -> void:
     var data := {
         "version": 2,
@@ -161,6 +177,16 @@ func save_game() -> void:
         "player_x": player_position.x,
         "player_y": player_position.y,
         "player_z": player_position.z,
+        "car_x": car_position.x,
+        "car_y": car_position.y,
+        "car_z": car_position.z,
+        "car_rotation_y": car_rotation_y,
+        "bike_x": bike_position.x,
+        "bike_y": bike_position.y,
+        "bike_z": bike_position.z,
+        "bike_rotation_y": bike_rotation_y,
+        "was_driving": was_driving,
+        "active_vehicle_kind": active_vehicle_kind,
         "transactions": transactions
     }
     var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -196,8 +222,22 @@ func load_game() -> void:
     player_position = Vector3(
         float(parsed.get("player_x", 0.0)),
         float(parsed.get("player_y", 0.0)),
-        float(parsed.get("player_z", 8.0))
+        float(parsed.get("player_z", 4.5))
     )
+    car_position = Vector3(
+        float(parsed.get("car_x", 0.0)),
+        float(parsed.get("car_y", 0.72)),
+        float(parsed.get("car_z", 0.0))
+    )
+    car_rotation_y = float(parsed.get("car_rotation_y", 0.0))
+    bike_position = Vector3(
+        float(parsed.get("bike_x", 6.0)),
+        float(parsed.get("bike_y", 0.58)),
+        float(parsed.get("bike_z", 0.0))
+    )
+    bike_rotation_y = float(parsed.get("bike_rotation_y", 0.0))
+    was_driving = bool(parsed.get("was_driving", false))
+    active_vehicle_kind = str(parsed.get("active_vehicle_kind", "car"))
     transactions.clear()
     for item in parsed.get("transactions", []):
         transactions.append(str(item))
