@@ -27,6 +27,8 @@ var run_touch := false
 var throttle_touch := 0.0
 var steer_touch := 0.0
 var job_stage := 0
+var job_title := ""
+var job_reward_active := 0
 var toast_time := 0.0
 var autosave_time := 20.0
 var performance_check_time := 0.0
@@ -42,7 +44,9 @@ var toast_label: Label
 var bank_panel: PanelContainer
 var phone_panel: PanelContainer
 var empire_panel: PanelContainer
+var job_panel: PanelContainer
 var bank_info: Label
+var job_info: Label
 var phone_info: Label
 var empire_info: Label
 var status_panel: PanelContainer
@@ -543,7 +547,7 @@ func _build_hud() -> void:
     hud_layer.add_child(top_buttons)
     _add_button(top_buttons, "PHONE", _toggle_phone)
     _add_button(top_buttons, "BANK", _toggle_bank)
-    _add_button(top_buttons, "JOB", _job_action)
+    _add_button(top_buttons, "JOBS", _job_action)
     _add_button(top_buttons, "EMPIRE", _toggle_empire)
     _add_button(top_buttons, "SAVE", _save_now)
 
@@ -574,9 +578,11 @@ func _layout_hud() -> void:
     var bank_size := bank_panel.get_combined_minimum_size()
     var phone_size := phone_panel.get_combined_minimum_size()
     var empire_size := empire_panel.get_combined_minimum_size()
+    var job_size := job_panel.get_combined_minimum_size()
     bank_panel.position = (view_size - bank_size) * 0.5
     phone_panel.position = (view_size - phone_size) * 0.5
     empire_panel.position = (view_size - empire_size) * 0.5
+    job_panel.position = (view_size - job_size) * 0.5
 
 func _panel_style(color: Color) -> StyleBoxFlat:
     var style := StyleBoxFlat.new()
@@ -673,10 +679,28 @@ func _build_panels() -> void:
     phone_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     phone_box.add_child(phone_info)
     _add_button(phone_box, "OPEN BANK", _toggle_bank, 180.0)
-    _add_button(phone_box, "DELIVERY JOB", _job_action, 180.0)
+    _add_button(phone_box, "JOB BOARD", _job_action, 180.0)
     _add_button(phone_box, "MY EMPIRE", _toggle_empire, 180.0)
     _add_button(phone_box, "CLOSE PHONE", _hide_panels, 180.0)
     phone_panel.hide()
+
+    job_panel = PanelContainer.new()
+    job_panel.custom_minimum_size = Vector2(440.0, 390.0)
+    job_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.08, 0.12, 0.98)))
+    hud_layer.add_child(job_panel)
+    var job_box := VBoxContainer.new()
+    job_box.add_theme_constant_override("separation", 8)
+    job_panel.add_child(job_box)
+    _add_title(job_box, "NAVAPURA JOB BOARD")
+    job_info = Label.new()
+    job_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    job_box.add_child(job_info)
+    _add_button(job_box, "FOOD DELIVERY • ₹650", _start_food_job, 280.0)
+    _add_button(job_box, "TAXI PICKUP • ₹500", _start_taxi_job, 280.0)
+    _add_button(job_box, "COURIER PARCEL • ₹900", _start_courier_job, 280.0)
+    _add_button(job_box, "CANCEL CURRENT JOB", _cancel_job, 280.0)
+    _add_button(job_box, "CLOSE", _hide_panels, 120.0)
+    job_panel.hide()
 
     empire_panel = PanelContainer.new()
     empire_panel.position = Vector2(400.0, 100.0)
@@ -823,21 +847,61 @@ func _update_job_progress() -> void:
             job_stage = 2
             pickup_marker.hide()
             drop_marker.show()
-            _show_toast("Package collected! Deliver it to the job office.")
+            _show_toast("%s pickup complete. Go to the destination." % job_title)
+            _refresh_ui()
         else:
             job_stage = 0
             drop_marker.hide()
-            GameState.earn(JOB_REWARD, "Delivery completed")
-            _show_toast("Delivery completed. Reward: ₹%d" % JOB_REWARD)
+            var completed_title := job_title
+            var completed_reward := job_reward_active
+            job_title = ""
+            job_reward_active = 0
+            GameState.complete_mission(completed_reward, completed_title)
+            _show_toast("%s completed. Reward: ₹%d" % [completed_title, completed_reward])
+            _refresh_ui()
 
 func _job_action() -> void:
+    var should_open := not job_panel.visible
+    _hide_panels()
+    job_panel.visible = should_open
+    _refresh_ui()
+
+func _start_food_job() -> void:
+    _start_job("Food delivery", 650, Vector3(-16.0, 0.85, 0.0), Vector3(0.0, 0.85, 40.0))
+
+func _start_taxi_job() -> void:
+    _start_job("Taxi passenger", 500, Vector3(40.0, 0.85, 0.0), Vector3(-40.0, 0.85, 40.0))
+
+func _start_courier_job() -> void:
+    _start_job("Courier parcel", 900, Vector3(0.0, 0.85, -40.0), Vector3(80.0, 0.85, 0.0))
+
+func _start_job(title: String, reward: int, pickup_position: Vector3, destination_position: Vector3) -> void:
+    if job_stage != 0:
+        _show_toast("Finish or cancel your current job first.")
+        return
+    job_title = title
+    job_reward_active = reward
+    pickup_marker.global_position = pickup_position
+    drop_marker.global_position = destination_position
+    job_stage = 1
+    pickup_marker.show()
+    drop_marker.hide()
+    _hide_panels()
+    _show_toast("%s accepted. Follow the yellow pickup marker." % title)
+    _refresh_ui()
+
+func _cancel_job() -> void:
     if job_stage == 0:
-        job_stage = 1
-        pickup_marker.show()
-        drop_marker.hide()
-        _show_toast("Delivery accepted. Go to the yellow pickup marker.")
-    else:
-        _show_toast("Finish your current delivery first.")
+        _show_toast("There is no active job to cancel.")
+        return
+    job_stage = 0
+    job_title = ""
+    job_reward_active = 0
+    pickup_marker.hide()
+    drop_marker.hide()
+    _hide_panels()
+    _show_toast("Job cancelled. No reward was paid.")
+    _refresh_ui()
 
 func _interact() -> void:
     if driving:
@@ -883,6 +947,7 @@ func _toggle_empire() -> void:
 func _hide_panels() -> void:
     bank_panel.hide()
     phone_panel.hide()
+    job_panel.hide()
     empire_panel.hide()
 
 func _buy_home() -> void:
@@ -913,7 +978,12 @@ func _refresh_ui() -> void:
             recent += "• %s\n" % GameState.transactions[i]
         bank_info.text = "Wallet: ₹%d\nBank: ₹%d\nNet worth: ₹%d\n\nRECENT TRANSACTIONS\n%s" % [GameState.wallet, GameState.bank_balance, GameState.net_worth(), recent]
     if is_instance_valid(phone_info):
-        phone_info.text = "Day %d\nWallet ₹%d  •  Bank ₹%d\nYour phone connects your jobs, bank and empire." % [GameState.day_number, GameState.wallet, GameState.bank_balance]
+        phone_info.text = "Day %d\nWallet ₹%d  •  Bank ₹%d\nCompleted jobs: %d\nYour phone connects your jobs, bank and empire." % [GameState.day_number, GameState.wallet, GameState.bank_balance, GameState.missions_completed]
+    if is_instance_valid(job_info):
+        if job_stage == 0:
+            job_info.text = "Choose a job. Complete the pickup and reach the destination to earn your reward.\nCompleted jobs: %d" % GameState.missions_completed
+        else:
+            job_info.text = "ACTIVE: %s\nReward: ₹%d\nStep: %s" % [job_title, job_reward_active, "Go to pickup" if job_stage == 1 else "Deliver to destination"]
     if is_instance_valid(empire_info):
         empire_info.text = "Day %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nCorner shop: %s\nUncollected income: ₹%d\nLifetime earnings: ₹%d\nNet worth: ₹%d" % [
             GameState.day_number,
