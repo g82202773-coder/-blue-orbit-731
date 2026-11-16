@@ -123,27 +123,46 @@ jobs:
           emulator-options: -no-snapshot-load -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           disable-animations: true
           script: |
-            set -euo pipefail
+            set +e
             PACKAGE="com.lifeempire.navapura.graphics_preview"
             mkdir -p build
             adb logcat -c
-            adb install -r build/LIFE-EMPIRE-debug.apk
-            adb shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1
+
+            adb install -r build/LIFE-EMPIRE-debug.apk > build/install.log 2>&1
+            INSTALL_STATUS=$?
+            cat build/install.log
+
+            # Launch the package's launcher activity using Monkey's default
+            # MAIN/LAUNCHER intent. Explicit -c parsing is inconsistent on
+            # some emulator images.
+            adb shell monkey -p "$PACKAGE" 1 > build/launch.log 2>&1
+            LAUNCH_STATUS=$?
+            cat build/launch.log
+
             sleep 20
-            if ! adb shell pidof "$PACKAGE" | tr -d '\r' | grep -q '[0-9]'; then
-              adb logcat -d -v time > build/emulator-logcat.txt
-              echo "LIFE EMPIRE process did not remain alive after launch."
-              exit 1
-            fi
-            adb shell dumpsys activity activities > build/emulator-activities.txt
-            adb shell dumpsys meminfo "$PACKAGE" > build/emulator-memory.txt
+
+            adb shell dumpsys activity activities > build/emulator-activities.txt 2>&1
+            adb shell dumpsys meminfo "$PACKAGE" > build/emulator-memory.txt 2>&1
             adb shell screencap -p /sdcard/life-empire-screen.png
-            adb pull /sdcard/life-empire-screen.png build/life-empire-screen.png
-            adb logcat -d -v time > build/emulator-logcat.txt
+            SCREEN_STATUS=$?
+            if [ "$SCREEN_STATUS" -eq 0 ]; then
+              adb pull /sdcard/life-empire-screen.png build/life-empire-screen.png
+            fi
+            adb logcat -d -v time > build/emulator-logcat.txt 2>&1
+
+            PID="$(adb shell pidof "$PACKAGE" 2>/dev/null | tr -d '\r')"
+            echo "Package PID: $PID"
+            echo "Install status: $INSTALL_STATUS; launch status: $LAUNCH_STATUS; screenshot status: $SCREEN_STATUS"
+
             if grep -E "FATAL EXCEPTION|Fatal signal|SCRIPT ERROR:|Parse Error:|Failed to load script" build/emulator-logcat.txt; then
               echo "Android emulator log contains a fatal startup or script error."
               exit 1
             fi
+            if [ "$INSTALL_STATUS" -ne 0 ] || [ "$LAUNCH_STATUS" -ne 0 ] || [ -z "$PID" ] || [ "$SCREEN_STATUS" -ne 0 ]; then
+              echo "LIFE EMPIRE failed installation, launch, process-alive, or screenshot validation."
+              exit 1
+            fi
+
             python - <<'PY'
             from PIL import Image
             image = Image.open("build/life-empire-screen.png").convert("RGB")
@@ -155,6 +174,7 @@ jobs:
             if colors < 40:
                 raise SystemExit("Screenshot looks nearly blank; refusing to pass visual startup smoke test.")
             PY
+
 
       - name: Upload emulator screenshot and diagnostics
         if: always()
