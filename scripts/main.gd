@@ -895,7 +895,8 @@ func _move_player(delta: float) -> void:
         float(Input.is_action_pressed("move_back")) - float(Input.is_action_pressed("move_forward"))
     )
     var input_axis := (keyboard + move_touch).limit_length(1.0)
-    var direction := Vector3(input_axis.x, 0.0, input_axis.y)
+    # Walk relative to the orbiting follow camera, matching standard third-person controls.
+    var direction := Vector3(input_axis.x, 0.0, input_axis.y).rotated(Vector3.UP, camera_yaw)
     var speed := RUN_SPEED if (run_touch or Input.is_action_pressed("run")) else WALK_SPEED
     if direction.length_squared() > 0.001:
         direction = direction.normalized()
