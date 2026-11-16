@@ -15,8 +15,18 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Mobile renderer: GL Compatibility
 - Landscape orientation; 1280x720 logical viewport
 
+## Current playable foundation
+- Procedurally generated Navapura city sector with connected roads, buildings, sidewalks and trees.
+- Third-person on-foot movement, walking/running, and touch D-pad controls.
+- Enterable arcade-style starter car with acceleration, braking, reverse and steering.
+- Three lightweight moving traffic cars and four looping pedestrians.
+- Delivery mission with pickup/drop-off markers and ₹750 reward.
+- Fictional wallet and bank with ₹500 deposit/withdraw actions and recent transaction records.
+- Starter home and corner-shop purchases, daily shop income, and collect-income action.
+- Offline JSON save/load, 20-second autosave, and Android application-pause saving.
+
 ## Development status
-This repository is the clean source-of-truth for the new LIFE EMPIRE project. Features are added incrementally and must be distinguished as implemented, locally tested, or device-tested. No APK or release is considered verified until it has been built and tested.
+This repository is the clean source-of-truth for the new LIFE EMPIRE project. Features are added incrementally and must be distinguished as implemented, CI-tested, or device-tested. The Godot 4.7 GitHub Actions import/parse and 120-frame headless scene smoke test has passed. No Android APK or release is considered verified until it has been exported and tested on a physical device.
 
 ## Performance principles
 - Target 30 FPS on baseline Android devices.
