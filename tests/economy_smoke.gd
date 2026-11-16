@@ -27,19 +27,21 @@ func _initialize() -> void:
     state.wallet = 5000
     assert(state.buy_shop(), "Corner shop purchase should succeed.")
     assert(state.shop_owned and state.wallet == 1000, "Shop purchase should deduct ₹4,000.")
+    assert(state.hire_shop_employee(), "A shop owner should be able to hire staff.")
+    assert(state.shop_employee_count == 1 and state.wallet == 500, "Hiring an employee should deduct ₹500.")
 
     state.advance_day()
-    assert(state.uncollected_shop_income == 250, "Owned shop should accrue ₹250 per day.")
+    assert(state.uncollected_shop_income == 350, "A staffed shop should accrue ₹350 per day.")
     assert(state.collect_shop_income(), "Shop income should be collectible.")
-    assert(state.wallet == 1250 and state.uncollected_shop_income == 0, "Collected income should reach wallet exactly once.")
+    assert(state.wallet == 850 and state.uncollected_shop_income == 0, "Collected income should reach wallet exactly once.")
 
     state.complete_mission(650, "Food delivery")
-    assert(state.wallet == 1900, "Mission reward should increase wallet.")
+    assert(state.wallet == 1500, "Mission reward should increase wallet.")
     assert(state.missions_completed == 1, "Mission completion should increment the progression counter.")
 
     state.fuel_percent = 35.0
     assert(state.refuel_vehicle(), "Refuelling should succeed when the player has ₹300.")
-    assert(state.wallet == 1600 and is_equal_approx(state.fuel_percent, 100.0), "Refuelling should deduct ₹300 and restore full fuel.")
+    assert(state.wallet == 1200 and is_equal_approx(state.fuel_percent, 100.0), "Refuelling should deduct ₹300 and restore full fuel.")
     state.consume_fuel(12.5)
     assert(is_equal_approx(state.fuel_percent, 87.5), "Driving should consume fuel without going negative.")
 
@@ -51,6 +53,7 @@ func _initialize() -> void:
     assert(restored.wallet == state.wallet, "Wallet should persist.")
     assert(restored.bank_balance == state.bank_balance, "Bank balance should persist.")
     assert(restored.home_owned and restored.shop_owned, "Owned assets should persist.")
+    assert(restored.shop_employee_count == 1, "Shop staffing should persist.")
     assert(restored.bike_owned, "Motorbike ownership should persist.")
     assert(restored.day_number == state.day_number, "Day count should persist.")
     assert(restored.missions_completed == 1, "Mission completion count should persist.")
