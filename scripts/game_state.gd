@@ -8,6 +8,8 @@ const STARTING_WALLET := 5000
 const MAX_TRANSACTIONS := 40
 const BANK_SAVINGS_INTEREST_RATE := 0.005
 const LOAN_DAILY_INTEREST_RATE := 0.02
+const SHOP_PURCHASE_PRICE := 4000
+const STARTER_SHOP_STOCK_VALUE := 375
 
 var wallet: int = STARTING_WALLET
 var bank_balance: int = 0
@@ -76,7 +78,9 @@ func net_worth() -> int:
     if apartment_owned:
         assets += 8000 + uncollected_apartment_rent
     if shop_owned:
-        assets += 4000 + shop_upgrade_investment + uncollected_shop_income + shop_stock_units * 15
+        # The starter inventory is included in the ₹4,000 acquisition price;
+        # only its remaining stock value is itemized after subtracting that bundle.
+        assets += SHOP_PURCHASE_PRICE - STARTER_SHOP_STOCK_VALUE + shop_upgrade_investment + uncollected_shop_income + shop_stock_units * 15
     if bike_owned:
         assets += 2500
     return assets - loan_balance
@@ -459,10 +463,10 @@ func buy_shop() -> bool:
     if shop_owned:
         toast_requested.emit("You already own the corner shop.")
         return false
-    if wallet < 4000:
-        toast_requested.emit("You need ₹4,000 in your wallet.")
+    if wallet < SHOP_PURCHASE_PRICE:
+        toast_requested.emit("You need ₹%d in your wallet." % SHOP_PURCHASE_PRICE)
         return false
-    wallet -= 4000
+    wallet -= SHOP_PURCHASE_PRICE
     shop_owned = true
     shop_stock_units = 25
     add_transaction("Purchased corner shop • -₹4,000")
