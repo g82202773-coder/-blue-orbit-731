@@ -34,6 +34,8 @@ var active_job_reward: int = 0
 var active_job_pickup_position: Vector3 = Vector3.ZERO
 var active_job_destination_position: Vector3 = Vector3.ZERO
 var fuel_percent: float = 100.0
+var car_condition_percent: float = 100.0
+var bike_condition_percent: float = 100.0
 var player_position: Vector3 = Vector3(0.0, 0.0, 4.5)
 var car_position: Vector3 = Vector3(0.0, 0.72, 0.0)
 var car_rotation_y: float = 0.0
@@ -183,6 +185,36 @@ func consume_fuel(amount: float) -> void:
     if amount <= 0.0:
         return
     fuel_percent = clampf(fuel_percent - amount, 0.0, 100.0)
+
+func vehicle_condition(kind: String) -> float:
+    return bike_condition_percent if kind == "motorbike" else car_condition_percent
+
+func consume_vehicle_condition(kind: String, amount: float) -> void:
+    if amount <= 0.0:
+        return
+    if kind == "motorbike":
+        bike_condition_percent = clampf(bike_condition_percent - amount, 0.0, 100.0)
+    else:
+        car_condition_percent = clampf(car_condition_percent - amount, 0.0, 100.0)
+
+func repair_vehicle(kind: String) -> bool:
+    var condition: float = vehicle_condition(kind)
+    if condition >= 99.9:
+        toast_requested.emit("Your vehicle is already in good condition.")
+        return false
+    var repair_cost: int = maxi(100, int(round((100.0 - condition) * 20.0)))
+    if wallet < repair_cost:
+        toast_requested.emit("You need ₹%d for this vehicle service." % repair_cost)
+        return false
+    wallet -= repair_cost
+    if kind == "motorbike":
+        bike_condition_percent = 100.0
+    else:
+        car_condition_percent = 100.0
+    add_transaction("%s service • -₹%d" % [kind.capitalize(), repair_cost])
+    save_game()
+    toast_requested.emit("%s serviced for ₹%d. Condition restored." % [kind.capitalize(), repair_cost])
+    return true
 
 func refuel_vehicle() -> bool:
     if fuel_percent >= 99.9:
@@ -388,7 +420,7 @@ func set_vehicle_state(kind: String, position: Vector3, rotation_y: float, is_dr
 
 func save_game() -> void:
     var data := {
-        "version": 10,
+        "version": 11,
         "wallet": wallet,
         "bank_balance": bank_balance,
         "loan_balance": loan_balance,
@@ -424,6 +456,8 @@ func save_game() -> void:
         "active_job_destination_y": active_job_destination_position.y,
         "active_job_destination_z": active_job_destination_position.z,
         "fuel_percent": fuel_percent,
+        "car_condition_percent": car_condition_percent,
+        "bike_condition_percent": bike_condition_percent,
         "player_x": player_position.x,
         "player_y": player_position.y,
         "player_z": player_position.z,
@@ -503,6 +537,8 @@ func load_game() -> void:
         float(parsed.get("active_job_destination_z", 0.0))
     )
     fuel_percent = clampf(float(parsed.get("fuel_percent", 100.0)), 0.0, 100.0)
+    car_condition_percent = clampf(float(parsed.get("car_condition_percent", 100.0)), 0.0, 100.0)
+    bike_condition_percent = clampf(float(parsed.get("bike_condition_percent", 100.0)), 0.0, 100.0)
     player_position = Vector3(
         float(parsed.get("player_x", 0.0)),
         float(parsed.get("player_y", 0.0)),
