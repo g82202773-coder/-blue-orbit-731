@@ -16,6 +16,10 @@ var game_minutes: float = 480.0
 var home_owned: bool = false
 var inside_home: bool = false
 var home_return_position: Vector3 = Vector3(0.0, 0.0, 4.5)
+var apartment_owned: bool = false
+var inside_apartment: bool = false
+var apartment_return_position: Vector3 = Vector3(0.0, 0.0, 4.5)
+var uncollected_apartment_rent: int = 0
 var inside_shop: bool = false
 var shop_return_position: Vector3 = Vector3(0.0, 0.0, 4.5)
 var shop_owned: bool = false
@@ -52,6 +56,8 @@ func net_worth() -> int:
     var assets := wallet + bank_balance
     if home_owned:
         assets += 3000
+    if apartment_owned:
+        assets += 9000 + uncollected_apartment_rent
     if shop_owned:
         assets += 4000 + uncollected_shop_income + shop_stock_units * 15
     if bike_owned:
@@ -120,6 +126,9 @@ func repay_loan(amount: int) -> bool:
     return true
 
 func _apply_daily_finances() -> void:
+    if apartment_owned:
+        uncollected_apartment_rent += 200
+        add_transaction("Apartment rent accrued +₹200")
     if shop_owned and shop_stock_units > 0:
         var daily_sales_capacity: int = 5 + shop_employee_count * 2
         var units_sold: int = mini(shop_stock_units, daily_sales_capacity)
@@ -242,6 +251,39 @@ func buy_home() -> bool:
     add_transaction("Purchased starter home • -₹3,000")
     save_game()
     toast_requested.emit("Your first home is now yours!")
+    return true
+
+func buy_apartment() -> bool:
+    if apartment_owned:
+        toast_requested.emit("You already own this rental apartment.")
+        return false
+    if wallet < 8000:
+        toast_requested.emit("You need ₹8,000 in your wallet to buy the apartment.")
+        return false
+    wallet -= 8000
+    apartment_owned = true
+    add_transaction("Purchased rental apartment • -₹8,000")
+    save_game()
+    toast_requested.emit("Rental apartment purchased. It can earn ₹200 per day.")
+    return true
+
+func collect_apartment_rent() -> bool:
+    if not apartment_owned:
+        toast_requested.emit("Purchase the rental apartment first.")
+        return false
+    if not inside_apartment:
+        toast_requested.emit("Enter your apartment to collect rent.")
+        return false
+    if uncollected_apartment_rent <= 0:
+        toast_requested.emit("No rent is ready to collect yet. Advance a day.")
+        return false
+    var amount: int = uncollected_apartment_rent
+    uncollected_apartment_rent = 0
+    wallet += amount
+    lifetime_earnings += amount
+    add_transaction("Collected apartment rent +₹%d" % amount)
+    save_game()
+    toast_requested.emit("Collected ₹%d in apartment rent." % amount)
     return true
 
 func buy_bike() -> bool:
@@ -384,11 +426,12 @@ func buy_meal() -> bool:
     return true
 
 func sleep_at_home() -> bool:
-    if not home_owned:
-        toast_requested.emit("Buy a home before using the sleep action.")
+    var inside_owned_residence: bool = (home_owned and inside_home) or (apartment_owned and inside_apartment)
+    if not home_owned and not apartment_owned:
+        toast_requested.emit("Buy a home or apartment before using the sleep action.")
         return false
-    if not inside_home:
-        toast_requested.emit("Enter your home before sleeping.")
+    if not inside_owned_residence:
+        toast_requested.emit("Enter your home or apartment before sleeping.")
         return false
     day_number += 1
     game_minutes = 8.0 * 60.0
@@ -420,7 +463,7 @@ func set_vehicle_state(kind: String, position: Vector3, rotation_y: float, is_dr
 
 func save_game() -> void:
     var data := {
-        "version": 11,
+        "version": 12,
         "wallet": wallet,
         "bank_balance": bank_balance,
         "loan_balance": loan_balance,
@@ -432,6 +475,12 @@ func save_game() -> void:
         "home_return_x": home_return_position.x,
         "home_return_y": home_return_position.y,
         "home_return_z": home_return_position.z,
+        "apartment_owned": apartment_owned,
+        "inside_apartment": inside_apartment,
+        "apartment_return_x": apartment_return_position.x,
+        "apartment_return_y": apartment_return_position.y,
+        "apartment_return_z": apartment_return_position.z,
+        "uncollected_apartment_rent": uncollected_apartment_rent,
         "inside_shop": inside_shop,
         "shop_return_x": shop_return_position.x,
         "shop_return_y": shop_return_position.y,
@@ -507,6 +556,14 @@ func load_game() -> void:
         float(parsed.get("home_return_y", 0.0)),
         float(parsed.get("home_return_z", 4.5))
     )
+    apartment_owned = bool(parsed.get("apartment_owned", false))
+    inside_apartment = bool(parsed.get("inside_apartment", false))
+    apartment_return_position = Vector3(
+        float(parsed.get("apartment_return_x", 0.0)),
+        float(parsed.get("apartment_return_y", 0.0)),
+        float(parsed.get("apartment_return_z", 4.5))
+    )
+    uncollected_apartment_rent = maxi(0, int(parsed.get("uncollected_apartment_rent", 0)))
     inside_shop = bool(parsed.get("inside_shop", false))
     shop_return_position = Vector3(
         float(parsed.get("shop_return_x", 0.0)),
