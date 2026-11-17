@@ -62,6 +62,7 @@ var hud_layer: CanvasLayer
 var wallet_label: Label
 var location_label: Label
 var fuel_label: Label
+var condition_label: Label
 var time_label: Label
 var needs_label: Label
 var clock_display_time := 0.0
@@ -889,6 +890,10 @@ func _build_hud() -> void:
     fuel_label.add_theme_font_size_override("font_size", 14)
     fuel_label.modulate = Color("#e4d8a7")
     status_box.add_child(fuel_label)
+    condition_label = Label.new()
+    condition_label.add_theme_font_size_override("font_size", 14)
+    condition_label.modulate = Color("#d8e1d4")
+    status_box.add_child(condition_label)
     perf_label = Label.new()
     perf_label.add_theme_font_size_override("font_size", 12)
     perf_label.modulate = Color("#d2dce2")
@@ -1041,6 +1046,7 @@ func _build_panels() -> void:
     _add_button(phone_box, "OPEN BANK", _toggle_bank, 180.0)
     _add_button(phone_box, "BUY MEAL • ₹100", _buy_meal, 180.0)
     _add_button(phone_box, "REFUEL VEHICLE • ₹300", _refuel_vehicle, 180.0)
+    _add_button(phone_box, "SERVICE NEARBY VEHICLE", _service_vehicle, 180.0)
     _add_button(phone_box, "RESET CAMERA", _reset_camera, 180.0)
     _add_button(phone_box, "JOB BOARD", _job_action, 180.0)
     _add_button(phone_box, "MY EMPIRE", _toggle_empire, 180.0)
@@ -1273,9 +1279,11 @@ func _drive_car(delta: float) -> void:
         car_speed = move_toward(car_speed, 0.0, 18.0 * delta)
     else:
         fuel_empty_notified = false
-    var top_speed := 21.0 if bike_mode else CAR_FORWARD_SPEED
-    var reverse_speed := 4.5 if bike_mode else CAR_REVERSE_SPEED
-    var acceleration := 15.0 if bike_mode else 12.0
+    var condition := GameState.vehicle_condition(active_vehicle_kind)
+    var condition_factor := 0.60 if condition < 20.0 else (0.82 if condition < 50.0 else 1.0)
+    var top_speed := (21.0 if bike_mode else CAR_FORWARD_SPEED) * condition_factor
+    var reverse_speed := (4.5 if bike_mode else CAR_REVERSE_SPEED) * condition_factor
+    var acceleration := (15.0 if bike_mode else 12.0) * condition_factor
     if throttle > 0.0:
         car_speed = move_toward(car_speed, top_speed, acceleration * delta)
     elif throttle < 0.0:
@@ -1305,6 +1313,7 @@ func _drive_car(delta: float) -> void:
     if absf(car_speed) > 0.5:
         GameState.consume_fuel(delta * (0.08 + absf(car_speed) * 0.004))
         GameState.consume_energy(delta * 0.0025)
+        GameState.consume_vehicle_condition(active_vehicle_kind, delta * (0.004 + absf(car_speed) * 0.0002))
         _update_fuel_hud()
 
 func _update_camera(delta: float) -> void:
@@ -1532,6 +1541,21 @@ func _refuel_vehicle() -> void:
         _update_fuel_hud()
         _refresh_ui()
 
+func _service_vehicle() -> void:
+    if driving:
+        _show_toast("Exit your vehicle before servicing it.")
+        return
+    var car_distance: float = player.global_position.distance_to(car.global_position)
+    var bike_distance: float = INF
+    if is_instance_valid(bike):
+        bike_distance = player.global_position.distance_to(bike.global_position)
+    if mini(car_distance, bike_distance) > 6.0:
+        _show_toast("Stand beside your car or motorbike to service it.")
+        return
+    var kind := "motorbike" if bike_distance < car_distance else "car"
+    if GameState.repair_vehicle(kind):
+        _refresh_ui()
+
 func _buy_bike() -> void:
     if GameState.bike_owned:
         _show_toast("Your motorbike is parked beside the central road.")
@@ -1607,7 +1631,7 @@ func _refresh_ui() -> void:
             recent += "• %s\n" % GameState.transactions[i]
         bank_info.text = "Wallet: ₹%d\nBank: ₹%d\nOutstanding loan: ₹%d\nDaily interest: 2%%\nNet worth: ₹%d\n\nRECENT TRANSACTIONS\n%s" % [GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.net_worth(), recent]
     if is_instance_valid(phone_info):
-        phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nLoan: ₹%d\nPlayer Level: %d  •  XP: %d / %d\nFuel: %d%%  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs completed: %d\nComplete jobs to gain XP and unlock higher-paying work." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), int(round(GameState.fuel_percent)), int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed]
+        phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nLoan: ₹%d\nPlayer Level: %d  •  XP: %d / %d\nFuel: %d%%  •  Car: %d%%\nBike: %d%%  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs completed: %d\nService vehicles nearby to restore condition." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), int(round(GameState.fuel_percent)), int(round(GameState.car_condition_percent)), int(round(GameState.bike_condition_percent)), int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed]
     if is_instance_valid(job_info):
         if job_stage == 0:
             var courier_status: String = "AVAILABLE" if GameState.can_accept_job("Courier parcel") else "LOCKED • LEVEL 2"
@@ -1666,6 +1690,10 @@ func _update_fuel_hud() -> void:
     if is_instance_valid(fuel_label):
         fuel_label.text = "FUEL  %d%%" % int(round(GameState.fuel_percent))
         fuel_label.modulate = Color("#e4d8a7") if GameState.fuel_percent > 20.0 else Color("#e28b78")
+    if is_instance_valid(condition_label):
+        condition_label.text = "CAR %d%%  •  BIKE %d%%" % [int(round(GameState.car_condition_percent)), int(round(GameState.bike_condition_percent))]
+        var lowest_condition: float = minf(GameState.car_condition_percent, GameState.bike_condition_percent)
+        condition_label.modulate = Color("#e28b78") if lowest_condition < 30.0 else Color("#d8e1d4")
 
 func _show_toast(message: String) -> void:
     if is_instance_valid(toast_label):
