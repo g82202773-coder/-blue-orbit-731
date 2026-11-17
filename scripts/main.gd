@@ -551,11 +551,12 @@ func _build_shop_interior() -> void:
     shop_tier1_visuals.name = "MiniMartDisplays"
     shop_interior.add_child(shop_tier1_visuals)
     for rack_x in [-2.7, 2.7]:
-        _box_mesh(shop_tier1_visuals, Vector3(0.62, 1.25, 1.8), Vector3(rack_x, 0.64, 4.55), mats["dark"], "MiniMartDisplayRack")
+        _box_mesh(shop_tier1_visuals, Vector3(1.8, 0.16, 0.62), Vector3(rack_x, 0.38, 4.55), mats["dark"], "MiniMartDisplayRack")
         for row in range(2):
             for column in range(2):
                 var stock_material: Material = mats["yellow"] if (row + column) % 2 == 0 else mats["blue"]
-                _box_mesh(shop_tier1_visuals, Vector3(0.4, 0.34, 0.58), Vector3(rack_x, 0.38 + float(row) * 0.56, 3.95 + float(column) * 0.68), stock_material, "MiniMartProduct")
+                var product_x: float = rack_x - 0.44 + float(column) * 0.88
+                _box_mesh(shop_tier1_visuals, Vector3(0.38, 0.36, 0.38), Vector3(product_x, 0.64 + float(row) * 0.38, 4.35 + float(row) * 0.35), stock_material, "MiniMartProduct")
     shop_tier1_visuals.hide()
 
     # Tier 2 adds a produce counter and prominent supermarket sign.
@@ -1989,7 +1990,7 @@ func _refresh_ui() -> void:
     if is_instance_valid(heavy_cargo_button):
         heavy_cargo_button.disabled = not GameState.can_accept_job("Heavy cargo")
     if is_instance_valid(empire_info):
-        empire_info.text = "Day %d  •  Player Level: %d\nXP: %d / %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nRental apartment: %s\nDaily rent: ₹%d\nUncollected rent: ₹%d\nCorner shop: %s • Tier %d\nShop employees: %d / 3\nShop stock: %d / %d units\nDaily sales capacity: %d units × ₹%d\nProjected daily shop income: ₹%d\nUncollected shop income: ₹%d\nMotorbike: %s\nShares: MTR %d • NRE %d • NCR %d\nPortfolio value: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
+        empire_info.text = "Day %d  •  Player Level: %d\nXP: %d / %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nRental apartment: %s\nDaily rent: ₹%d\nUncollected rent: ₹%d\nCorner shop: %s\nShop employees: %d / 3\nShop stock: %d / %d units\nDaily sales capacity: %d units × ₹%d\nProjected daily shop income: ₹%d\nUncollected shop income: ₹%d\nMotorbike: %s\nShares: MTR %d • NRE %d • NCR %d\nPortfolio value: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
             GameState.day_number,
             GameState.player_level,
             GameState.player_xp,
@@ -2000,8 +2001,7 @@ func _refresh_ui() -> void:
             "Owned" if GameState.apartment_owned else "Not owned",
             200 if GameState.apartment_owned else 0,
             GameState.uncollected_apartment_rent,
-            "Owned • %s" % GameState.shop_tier_name() if GameState.shop_owned else "Not owned",
-            GameState.shop_upgrade_level,
+            "%s" % GameState.shop_tier_name() if GameState.shop_owned else "Not owned",
             GameState.shop_employee_count,
             GameState.shop_stock_units,
             GameState.shop_stock_capacity(),
