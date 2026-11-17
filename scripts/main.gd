@@ -74,12 +74,14 @@ var clock_display_time := 0.0
 var perf_label: Label
 var toast_label: Label
 var bank_panel: PanelContainer
+var investment_panel: PanelContainer
 var phone_panel: PanelContainer
 var empire_panel: PanelContainer
 var job_panel: PanelContainer
 var map_panel: PanelContainer
 var minimap_display: Control
 var bank_info: Label
+var investment_info: Label
 var job_info: Label
 var courier_job_button: Button
 var heavy_cargo_button: Button
@@ -1117,8 +1119,10 @@ func _layout_hud() -> void:
     var empire_size := empire_panel.get_combined_minimum_size()
     var job_size := job_panel.get_combined_minimum_size()
     var map_size := map_panel.get_combined_minimum_size()
+    var investment_size := investment_panel.get_combined_minimum_size()
     bank_panel.position = (view_size - bank_size) * 0.5
     phone_panel.position = (view_size - phone_size) * 0.5
+    investment_panel.position = (view_size - investment_size) * 0.5
     map_panel.position = (view_size - map_size) * 0.5
     empire_panel.position = (view_size - empire_size) * 0.5
     job_panel.position = (view_size - job_size) * 0.5
@@ -1227,6 +1231,7 @@ func _build_panels() -> void:
     phone_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     phone_box.add_child(phone_info)
     _add_button(phone_box, "OPEN BANK", _toggle_bank, 180.0)
+    _add_button(phone_box, "INVESTMENTS", _toggle_investments, 180.0)
     _add_button(phone_box, "BUY MEAL • ₹100", _buy_meal, 180.0)
     _add_button(phone_box, "REFUEL AT STATION • ₹300", _refuel_vehicle, 180.0)
     _add_button(phone_box, "SERVICE NEARBY VEHICLE", _service_vehicle, 180.0)
@@ -1250,6 +1255,30 @@ func _build_panels() -> void:
     map_box.add_child(minimap_display)
     _add_button(map_box, "CLOSE MAP", _hide_panels, 140.0)
     map_panel.hide()
+
+    investment_panel = PanelContainer.new()
+    investment_panel.custom_minimum_size = Vector2(480.0, 550.0)
+    investment_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.08, 0.12, 0.98)))
+    hud_layer.add_child(investment_panel)
+    var investment_scroll := ScrollContainer.new()
+    investment_scroll.custom_minimum_size = Vector2(460.0, 530.0)
+    investment_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    investment_panel.add_child(investment_scroll)
+    var investment_box := VBoxContainer.new()
+    investment_box.add_theme_constant_override("separation", 8)
+    investment_scroll.add_child(investment_box)
+    _add_title(investment_box, "NAVAPURA STOCK EXCHANGE")
+    investment_info = Label.new()
+    investment_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    investment_box.add_child(investment_info)
+    _add_button(investment_box, "BUY 1 MTR SHARE", func(): _buy_market_share("MTR"), 280.0)
+    _add_button(investment_box, "SELL 1 MTR SHARE", func(): _sell_market_share("MTR"), 280.0)
+    _add_button(investment_box, "BUY 1 NRE SHARE", func(): _buy_market_share("NRE"), 280.0)
+    _add_button(investment_box, "SELL 1 NRE SHARE", func(): _sell_market_share("NRE"), 280.0)
+    _add_button(investment_box, "BUY 1 NCR SHARE", func(): _buy_market_share("NCR"), 280.0)
+    _add_button(investment_box, "SELL 1 NCR SHARE", func(): _sell_market_share("NCR"), 280.0)
+    _add_button(investment_box, "CLOSE EXCHANGE", _hide_panels, 160.0)
+    investment_panel.hide()
 
     job_panel = PanelContainer.new()
     job_panel.custom_minimum_size = Vector2(460.0, 470.0)
@@ -1737,6 +1766,21 @@ func _toggle_phone() -> void:
     _hide_panels()
     phone_panel.visible = should_open
 
+func _toggle_investments() -> void:
+    var should_open := not investment_panel.visible
+    _hide_panels()
+    investment_panel.visible = should_open
+    if should_open:
+        _refresh_ui()
+
+func _buy_market_share(ticker: String) -> void:
+    if GameState.buy_shares(ticker, 1):
+        _refresh_ui()
+
+func _sell_market_share(ticker: String) -> void:
+    if GameState.sell_shares(ticker, 1):
+        _refresh_ui()
+
 func _toggle_empire() -> void:
     var should_open := not empire_panel.visible
     _hide_panels()
@@ -1744,6 +1788,7 @@ func _toggle_empire() -> void:
 
 func _hide_panels() -> void:
     bank_panel.hide()
+    investment_panel.hide()
     phone_panel.hide()
     map_panel.hide()
     if is_instance_valid(minimap_display):
@@ -1862,6 +1907,8 @@ func _refresh_ui() -> void:
         shop_sign.text = "YOUR TEA HOUSE" if GameState.shop_owned else "TEA HOUSE • FOR SALE"
     if is_instance_valid(apartment_sign):
         apartment_sign.text = "YOUR RENTAL APARTMENT" if GameState.apartment_owned else "APARTMENT • ₹8,000"
+    if is_instance_valid(investment_info):
+        investment_info.text = "All companies and prices are fictional game data. Prices update once per in-game day.\n\nMTR • Metro Transit Retail\nPrice: ₹%d  |  Shares owned: %d  |  Value: ₹%d\n\nNRE • Navapura Renewable Energy\nPrice: ₹%d  |  Shares owned: %d  |  Value: ₹%d\n\nNCR • Navapura Consumer Retail\nPrice: ₹%d  |  Shares owned: %d  |  Value: ₹%d\n\nTOTAL PORTFOLIO VALUE: ₹%d\nNet worth includes your current market holdings. Buying and selling use wallet cash." % [GameState.share_price("MTR"), GameState.shares_mtr, GameState.share_price("MTR") * GameState.shares_mtr, GameState.share_price("NRE"), GameState.shares_nre, GameState.share_price("NRE") * GameState.shares_nre, GameState.share_price("NCR"), GameState.shares_ncr, GameState.share_price("NCR") * GameState.shares_ncr, GameState.investment_portfolio_value()]
     if is_instance_valid(bank_info):
         var recent := ""
         for i in range(mini(GameState.transactions.size(), 5)):
