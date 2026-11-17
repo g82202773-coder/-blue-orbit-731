@@ -24,6 +24,8 @@ var shop_employee_count: int = 0
 var shop_stock_units: int = 0
 var uncollected_shop_income: int = 0
 var missions_completed: int = 0
+var player_level: int = 1
+var player_xp: int = 0
 var hunger_percent: float = 100.0
 var energy_percent: float = 100.0
 var active_job_stage: int = 0
@@ -141,7 +143,41 @@ func complete_mission(amount: int, mission_name: String) -> void:
         return
     missions_completed += 1
     earn(amount, "%s completed" % mission_name)
+    var xp_reward: int = maxi(25, int(round(float(amount) / 20.0)))
+    add_job_experience(xp_reward)
+
+func xp_to_next_level() -> int:
+    return player_level * 100
+
+func required_level_for_job(job_title: String) -> int:
+    match job_title:
+        "Courier parcel":
+            return 2
+        "Heavy cargo":
+            return 3
+        _:
+            return 1
+
+func can_accept_job(job_title: String) -> bool:
+    return player_level >= required_level_for_job(job_title)
+
+func add_job_experience(amount: int) -> void:
+    if amount <= 0 or player_level >= 20:
+        return
+    player_xp += amount
+    var levels_gained := 0
+    while player_level < 20 and player_xp >= xp_to_next_level():
+        player_xp -= xp_to_next_level()
+        player_level += 1
+        levels_gained += 1
+        add_transaction("Reached Player Level %d" % player_level)
+    if player_level >= 20:
+        player_xp = 0
     save_game()
+    if levels_gained > 0:
+        toast_requested.emit("LEVEL UP! You reached Player Level %d." % player_level)
+    else:
+        toast_requested.emit("+%d job XP. %d / %d to next level." % [amount, player_xp, xp_to_next_level()])
 
 func consume_fuel(amount: float) -> void:
     if amount <= 0.0:
@@ -352,7 +388,7 @@ func set_vehicle_state(kind: String, position: Vector3, rotation_y: float, is_dr
 
 func save_game() -> void:
     var data := {
-        "version": 9,
+        "version": 10,
         "wallet": wallet,
         "bank_balance": bank_balance,
         "loan_balance": loan_balance,
@@ -374,6 +410,8 @@ func save_game() -> void:
         "shop_stock_units": shop_stock_units,
         "uncollected_shop_income": uncollected_shop_income,
         "missions_completed": missions_completed,
+        "player_level": player_level,
+        "player_xp": player_xp,
         "hunger_percent": hunger_percent,
         "energy_percent": energy_percent,
         "active_job_stage": active_job_stage,
@@ -447,6 +485,8 @@ func load_game() -> void:
     shop_stock_units = clampi(int(parsed.get("shop_stock_units", 25 if shop_owned else 0)), 0, 50)
     uncollected_shop_income = maxi(0, int(parsed.get("uncollected_shop_income", parsed.get("business_cashflow", 0))))
     missions_completed = maxi(0, int(parsed.get("missions_completed", 0)))
+    player_level = clampi(int(parsed.get("player_level", 1)), 1, 20)
+    player_xp = clampi(int(parsed.get("player_xp", 0)), 0, maxi(0, xp_to_next_level() - 1))
     hunger_percent = clampf(float(parsed.get("hunger_percent", 100.0)), 0.0, 100.0)
     energy_percent = clampf(float(parsed.get("energy_percent", 100.0)), 0.0, 100.0)
     active_job_stage = clampi(int(parsed.get("active_job_stage", 0)), 0, 2)
