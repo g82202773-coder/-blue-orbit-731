@@ -14,6 +14,8 @@ var lifetime_earnings: int = 0
 var day_number: int = 1
 var game_minutes: float = 480.0
 var home_owned: bool = false
+var inside_home: bool = false
+var home_return_position: Vector3 = Vector3(0.0, 0.0, 4.5)
 var shop_owned: bool = false
 var bike_owned: bool = false
 var shop_employee_count: int = 0
@@ -320,6 +322,10 @@ func save_game() -> void:
         "day_number": day_number,
         "game_minutes": game_minutes,
         "home_owned": home_owned,
+        "inside_home": inside_home,
+        "home_return_x": home_return_position.x,
+        "home_return_y": home_return_position.y,
+        "home_return_z": home_return_position.z,
         "shop_owned": shop_owned,
         "bike_owned": bike_owned,
         "shop_employee_count": shop_employee_count,
@@ -380,6 +386,12 @@ func load_game() -> void:
     day_number = maxi(1, int(parsed.get("day_number", 1)))
     game_minutes = fposmod(float(parsed.get("game_minutes", 480.0)), 1440.0)
     home_owned = bool(parsed.get("home_owned", parsed.get("property_owned", false)))
+    inside_home = bool(parsed.get("inside_home", false))
+    home_return_position = Vector3(
+        float(parsed.get("home_return_x", 0.0)),
+        float(parsed.get("home_return_y", 0.0)),
+        float(parsed.get("home_return_z", 4.5))
+    )
     shop_owned = bool(parsed.get("shop_owned", parsed.get("business_owned", false)))
     bike_owned = bool(parsed.get("bike_owned", false))
     shop_employee_count = clampi(int(parsed.get("shop_employee_count", 0)), 0, 3)
