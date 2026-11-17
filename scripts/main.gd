@@ -15,6 +15,7 @@ const SHOP_DOOR_POSITION := Vector3(-20.0, 1.0, -68.0)
 const SHOP_INTERIOR_POSITION := Vector3(180.0, 1.0, 150.0)
 const APARTMENT_DOOR_POSITION := Vector3(100.0, 1.0, -68.0)
 const APARTMENT_INTERIOR_POSITION := Vector3(150.0, 1.0, -150.0)
+const FUEL_STATION_POSITION := Vector3(-100.0, 1.0, 40.0)
 
 var mats: Dictionary = {}
 var game_environment: Environment
@@ -99,6 +100,7 @@ func _ready() -> void:
     _create_materials()
     _build_environment()
     _build_city()
+    _build_fuel_station()
     _build_home_property()
     _build_shop_interior()
     _build_apartment_property()
@@ -358,6 +360,44 @@ func _build_pedestrians() -> void:
         pedestrian.set("walk_speed", 1.0 + float(i % 2) * 0.25)
         pedestrian.set("clothing_color", clothes[i])
         add_child(pedestrian)
+
+func _build_fuel_station() -> void:
+    var station := Node3D.new()
+    station.name = "NavapuraFuelStation"
+    station.position = Vector3(-100.0, 0.0, 40.0)
+    add_child(station)
+    _static_box(station, Vector3(19.0, 0.22, 16.0), Vector3.ZERO, mats["concrete"], "FuelStationForecourt")
+    _box_mesh(station, Vector3(14.0, 0.42, 11.0), Vector3(0.0, 5.0, 0.0), mats["yellow"], "FuelCanopy")
+    for x in [-6.0, 6.0]:
+        for z in [-4.5, 4.5]:
+            _static_box(station, Vector3(0.35, 4.8, 0.35), Vector3(x, 2.5, z), mats["white"], "FuelCanopyColumn")
+    for x in [-3.2, 3.2]:
+        var pump := Node3D.new()
+        pump.name = "FuelPump"
+        pump.position = Vector3(x, 0.0, -1.0)
+        station.add_child(pump)
+        _box_mesh(pump, Vector3(0.9, 1.45, 0.85), Vector3(0.0, 0.82, 0.0), mats["white"], "PumpBody")
+        _box_mesh(pump, Vector3(0.62, 0.38, 0.08), Vector3(0.0, 1.14, -0.47), mats["blue"], "PumpDisplay")
+        _box_mesh(pump, Vector3(0.18, 0.75, 0.12), Vector3(0.52, 0.72, 0.0), mats["dark"], "PumpHose")
+        _box_mesh(pump, Vector3(0.12, 0.38, 0.18), Vector3(0.52, 0.35, -0.12), mats["dark"], "PumpNozzle")
+    var sign_post := _static_box(station, Vector3(0.25, 5.0, 0.25), Vector3(7.8, 2.5, 6.0), mats["dark"], "FuelSignPost")
+    var fuel_sign := Label3D.new()
+    fuel_sign.name = "FuelStationSign"
+    fuel_sign.text = "NAVAPURA FUEL\nPETROL • DIESEL"
+    fuel_sign.font_size = 30
+    fuel_sign.outline_size = 6
+    fuel_sign.modulate = Color("#fff2d5")
+    fuel_sign.position = Vector3(0.0, 2.4, 0.25)
+    fuel_sign.pixel_size = 0.009
+    sign_post.add_child(fuel_sign)
+    var road_label := Label3D.new()
+    road_label.text = "FUEL • 24/7"
+    road_label.font_size = 42
+    road_label.outline_size = 7
+    road_label.modulate = Color("#fff0b4")
+    road_label.position = Vector3(0.0, 6.5, -5.4)
+    road_label.pixel_size = 0.009
+    station.add_child(road_label)
 
 func _build_home_property() -> void:
     var exterior := Node3D.new()
@@ -1188,7 +1228,7 @@ func _build_panels() -> void:
     phone_box.add_child(phone_info)
     _add_button(phone_box, "OPEN BANK", _toggle_bank, 180.0)
     _add_button(phone_box, "BUY MEAL • ₹100", _buy_meal, 180.0)
-    _add_button(phone_box, "REFUEL VEHICLE • ₹300", _refuel_vehicle, 180.0)
+    _add_button(phone_box, "REFUEL AT STATION • ₹300", _refuel_vehicle, 180.0)
     _add_button(phone_box, "SERVICE NEARBY VEHICLE", _service_vehicle, 180.0)
     _add_button(phone_box, "RESET CAMERA", _reset_camera, 180.0)
     _add_button(phone_box, "JOB BOARD", _job_action, 180.0)
@@ -1715,6 +1755,19 @@ func _buy_home() -> void:
     GameState.buy_home()
 
 func _refuel_vehicle() -> void:
+    if driving:
+        _show_toast("Exit your vehicle before refuelling.")
+        return
+    if player.global_position.distance_to(FUEL_STATION_POSITION) > 8.0:
+        _show_toast("Visit the F marker on your city map to refuel.")
+        return
+    var car_distance: float = player.global_position.distance_to(car.global_position)
+    var bike_distance: float = INF
+    if is_instance_valid(bike):
+        bike_distance = player.global_position.distance_to(bike.global_position)
+    if minf(car_distance, bike_distance) > 8.0:
+        _show_toast("Park your car or motorbike beside a fuel pump first.")
+        return
     if GameState.refuel_vehicle():
         fuel_empty_notified = false
         _update_fuel_hud()
@@ -1859,6 +1912,8 @@ func _update_minimap() -> void:
     minimap_display.set("player_position", map_player_position)
     minimap_display.set("apartment_position", APARTMENT_DOOR_POSITION)
     minimap_display.set("has_apartment", true)
+    minimap_display.set("fuel_station_position", FUEL_STATION_POSITION)
+    minimap_display.set("has_fuel_station", true)
     minimap_display.set("home_position", HOME_DOOR_POSITION)
     minimap_display.set("has_home", true)
     minimap_display.set("shop_position", SHOP_DOOR_POSITION)
