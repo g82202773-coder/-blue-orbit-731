@@ -77,14 +77,19 @@ func _initialize() -> void:
     assert(is_equal_approx(state.energy_percent, 100.0), "Sleeping should fully restore energy.")
     assert(is_equal_approx(state.hunger_percent, 70.0), "Sleeping should consume 15 hunger points.")
     assert(state.shop_stock_units == 4, "The shop should have four units left after three trading days.")
+    assert(not state.restock_shop(), "Restocking should be blocked while outside the shop.")
+    state.inside_home = false
+    state.inside_shop = true
+    state.shop_return_position = Vector3(-20.0, 1.0, -68.0)
     var net_worth_before_restock: int = state.net_worth()
-    assert(state.restock_shop(), "A shop owner should be able to purchase more stock.")
+    assert(state.restock_shop(), "A shop owner inside the store should be able to purchase more stock.")
     assert(state.wallet == 800 and state.shop_stock_units == 24, "Restocking should cost ₹300 and add 20 units.")
     assert(state.net_worth() == net_worth_before_restock, "Restocking should transfer value from cash to inventory without changing net worth.")
     assert(state.uncollected_shop_income == 700, "Daily business income should accrue on each full day.")
     assert(state.loan_balance == 1593, "Loan interest should accrue when sleeping advances a day.")
 
     state.set_player_position(Vector3(150.0, 1.0, 150.0))
+    state.inside_shop = false
     state.inside_home = true
     state.home_return_position = Vector3(100.0, 1.0, 98.0)
     state.set_vehicle_state("motorbike", Vector3(12.0, 0.58, 24.0), 1.2, true)
@@ -102,6 +107,8 @@ func _initialize() -> void:
     assert(restored.home_owned and restored.shop_owned, "Owned assets should persist.")
     assert(restored.inside_home, "The saved home interior state should persist.")
     assert(restored.home_return_position.is_equal_approx(Vector3(100.0, 1.0, 98.0)), "The front-door return position should persist.")
+    assert(not restored.inside_shop, "Entering the home should clear the shop interior state.")
+    assert(restored.shop_return_position.is_equal_approx(Vector3(-20.0, 1.0, -68.0)), "The shop return position should persist.")
     assert(restored.shop_employee_count == 1, "Shop staffing should persist.")
     assert(restored.shop_stock_units == 24, "Shop inventory should persist.")
     assert(restored.bike_owned, "Motorbike ownership should persist.")
