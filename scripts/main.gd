@@ -1033,7 +1033,8 @@ func _update_job_progress() -> void:
     if job_stage == 0:
         return
     var target := pickup_marker.global_position if job_stage == 1 else drop_marker.global_position
-    var actor := car.global_position if driving else player.global_position
+    # Missions can be completed on foot, in the starter car, or on the owned bike.
+    var actor := active_vehicle.global_position if driving and is_instance_valid(active_vehicle) else player.global_position
     if actor.distance_to(target) < 5.0:
         if job_stage == 1:
             job_stage = 2
