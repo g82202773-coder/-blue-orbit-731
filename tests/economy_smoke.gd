@@ -241,5 +241,38 @@ func _initialize() -> void:
     assert(is_equal_approx(timed_restored.active_job_time_remaining, 150.0), "Remaining mission time should persist.")
     assert(is_equal_approx(timed_restored.active_job_time_limit, 180.0), "Original mission time limit should persist.")
     assert(timed_restored.missions_failed == 1, "Failed mission count should persist.")
-    print("LIFE EMPIRE economy, property, timed missions, vehicle and fuel tests passed.")
+
+    # Fictional share market: buying/selling transfers value between cash and portfolio.
+    var market_state = GameStateScript.new()
+    market_state.wallet = 5000
+    market_state.bank_balance = 0
+    market_state.loan_balance = 0
+    market_state.day_number = 1
+    market_state.shares_mtr = 0
+    market_state.shares_nre = 0
+    market_state.shares_ncr = 0
+    market_state.transactions.clear()
+    var starting_market_net_worth: int = market_state.net_worth()
+    var mtr_price: int = market_state.share_price("MTR")
+    assert(mtr_price > 0, "A listed company should have a positive share price.")
+    assert(market_state.buy_shares("MTR", 2), "The player should be able to buy affordable shares.")
+    assert(market_state.wallet == 5000 - (mtr_price * 2), "Buying shares should deduct their market value from the wallet.")
+    assert(market_state.shares_mtr == 2, "Bought shares should be added to the portfolio.")
+    assert(market_state.investment_portfolio_value() == mtr_price * 2, "Portfolio value should use the current market price.")
+    assert(market_state.net_worth() == starting_market_net_worth, "Buying shares should move value from cash into investments without creating net worth.")
+    assert(not market_state.buy_shares("UNKNOWN", 1), "Unlisted tickers should be rejected.")
+    assert(not market_state.buy_shares("NRE", 100), "Purchases exceeding available wallet cash should be rejected.")
+    assert(not market_state.sell_shares("NCR", 1), "The player should not be able to sell unowned shares.")
+    assert(market_state.sell_shares("MTR", 1), "Owned shares should be sellable.")
+    assert(market_state.shares_mtr == 1 and market_state.wallet == 5000 - mtr_price, "Selling one share should credit its current market value.")
+    assert(market_state.net_worth() == starting_market_net_worth, "Selling shares should preserve net worth at the same market price.")
+    assert(market_state.buy_shares("NRE", 2), "A second listed company should also be tradable.")
+    market_state.day_number = 2
+    assert(market_state.share_price("MTR") != mtr_price, "Share prices should update as the in-game day changes.")
+    market_state.save_game()
+    var market_restored = GameStateScript.new()
+    market_restored.load_game()
+    assert(market_restored.shares_mtr == 1 and market_restored.shares_nre == 2, "All company holdings should persist after reload.")
+    assert(market_restored.investment_portfolio_value() == market_state.investment_portfolio_value(), "Saved shares should retain their live market valuation.")
+    print("LIFE EMPIRE economy, investments, property, timed missions, vehicle and fuel tests passed.")
     quit(0)
