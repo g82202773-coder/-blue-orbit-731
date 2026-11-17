@@ -32,6 +32,11 @@ var apartment_sign: Label3D
 var window_transforms: Array[Transform3D] = []
 var trim_transforms: Array[Transform3D] = []
 var facade_frame_transforms: Array[Transform3D] = []
+var balcony_slab_transforms: Array[Transform3D] = []
+var balcony_rail_transforms: Array[Transform3D] = []
+var balcony_bar_transforms: Array[Transform3D] = []
+var ac_unit_transforms: Array[Transform3D] = []
+var roof_parapet_transforms: Array[Transform3D] = []
 var lane_transforms: Array[Transform3D] = []
 var crosswalk_transforms: Array[Transform3D] = []
 var player: CharacterBody3D
@@ -192,6 +197,9 @@ func _create_materials() -> void:
         "blue": _material(Color("#718b99"), 0.78),
         "brick": _material(Color("#956c58"), 0.95),
         "glass": _material(Color("#315b70"), 0.18),
+        "metal": _material(Color("#59636a"), 0.58),
+        "balcony": _material(Color("#d7d3c9"), 0.72),
+        "ac": _material(Color("#d9dedf"), 0.76),
         "dark": _material(Color("#282d31"), 0.9),
         "green": _material(Color("#557d50"), 1.0),
         "skin": _material(Color("#b9825e"), 0.8),
@@ -767,6 +775,12 @@ func _build_building(center: Vector3, size: Vector3, facade: Material, index: in
     body.add_child(shape_node)
     _box_mesh(body, size, Vector3.ZERO, facade, "BuildingFacade")
     _box_mesh(body, Vector3(size.x + 0.35, 0.35, size.z + 0.35), Vector3(0.0, size.y * 0.5 + 0.18, 0.0), mats["dark"], "Roof")
+    var parapet_y := size.y * 0.5 + 0.42
+    roof_parapet_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(0.0, parapet_y, -size.z * 0.5)))
+    roof_parapet_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(0.0, parapet_y, size.z * 0.5)))
+    var roof_side_basis := Basis(Vector3.UP, PI * 0.5)
+    roof_parapet_transforms.append(Transform3D(roof_side_basis, center + Vector3(-size.x * 0.5, parapet_y, 0.0)))
+    roof_parapet_transforms.append(Transform3D(roof_side_basis, center + Vector3(size.x * 0.5, parapet_y, 0.0)))
     add_child(body)
 
     # Repeated facade elements are GPU-instanced across the whole city sector.
@@ -784,12 +798,21 @@ func _build_building(center: Vector3, size: Vector3, facade: Material, index: in
                 Transform3D(side_basis, center + Vector3(-size.x * 0.5 - 0.045, wy, wz)),
                 Transform3D(side_basis, center + Vector3(size.x * 0.5 + 0.045, wy, wz))
             ]
-            for face in window_faces:
+            for face_index in range(window_faces.size()):
+                var face: Transform3D = window_faces[face_index]
                 window_transforms.append(face)
                 facade_frame_transforms.append(Transform3D(face.basis, face.origin + face.basis * Vector3(0.0, 0.59, 0.0)))
                 facade_frame_transforms.append(Transform3D(face.basis, face.origin + face.basis * Vector3(0.0, -0.59, 0.0)))
                 facade_frame_transforms.append(Transform3D(face.basis, face.origin + face.basis * Vector3(-0.82, 0.0, 0.0)))
                 facade_frame_transforms.append(Transform3D(face.basis, face.origin + face.basis * Vector3(0.82, 0.0, 0.0)))
+                if face_index == 0 and row == 0 and column != 1 and index % 2 == 0:
+                    balcony_slab_transforms.append(Transform3D(face.basis, face.origin + face.basis * Vector3(0.0, -0.72, -0.28)))
+                    balcony_rail_transforms.append(Transform3D(face.basis, face.origin + face.basis * Vector3(0.0, -0.12, -0.53)))
+                    for bar_index in range(5):
+                        var bar_x := -0.72 + float(bar_index) * 0.36
+                        balcony_bar_transforms.append(Transform3D(face.basis, face.origin + face.basis * Vector3(bar_x, -0.42, -0.53)))
+                elif face_index == 0 and row == 1 and column == 1 and index % 3 == 0:
+                    ac_unit_transforms.append(Transform3D(face.basis, face.origin + face.basis * Vector3(0.0, -0.88, -0.20)))
         if row > 0:
             var trim_y := -size.y * 0.5 + 1.0 + float(row) * 3.2
             trim_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(0.0, trim_y, -size.z * 0.5 - 0.02)))
@@ -825,6 +848,21 @@ func _build_window_batch() -> void:
     var frame_mesh := BoxMesh.new()
     frame_mesh.size = Vector3(0.09, 0.09, 0.13)
     _create_multimesh_batch(frame_mesh, mats["white"], facade_frame_transforms, "InstancedWindowFrames")
+    var balcony_slab := BoxMesh.new()
+    balcony_slab.size = Vector3(1.95, 0.12, 0.62)
+    _create_multimesh_batch(balcony_slab, mats["balcony"], balcony_slab_transforms, "InstancedBalconyFloors")
+    var balcony_rail := BoxMesh.new()
+    balcony_rail.size = Vector3(1.95, 0.09, 0.09)
+    _create_multimesh_batch(balcony_rail, mats["metal"], balcony_rail_transforms, "InstancedBalconyRails")
+    var balcony_bar := BoxMesh.new()
+    balcony_bar.size = Vector3(0.055, 0.58, 0.055)
+    _create_multimesh_batch(balcony_bar, mats["metal"], balcony_bar_transforms, "InstancedBalconyBars")
+    var ac_mesh := BoxMesh.new()
+    ac_mesh.size = Vector3(0.95, 0.48, 0.38)
+    _create_multimesh_batch(ac_mesh, mats["ac"], ac_unit_transforms, "InstancedAirConditioners")
+    var parapet_mesh := BoxMesh.new()
+    parapet_mesh.size = Vector3(13.5, 0.48, 0.22)
+    _create_multimesh_batch(parapet_mesh, mats["cream"], roof_parapet_transforms, "InstancedRoofParapets")
 
 func _build_road_markings() -> void:
     var dash := BoxMesh.new()
