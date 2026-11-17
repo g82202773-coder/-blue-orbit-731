@@ -31,6 +31,7 @@ var apartment_interior: Node3D
 var apartment_sign: Label3D
 var window_transforms: Array[Transform3D] = []
 var trim_transforms: Array[Transform3D] = []
+var facade_frame_transforms: Array[Transform3D] = []
 var lane_transforms: Array[Transform3D] = []
 var crosswalk_transforms: Array[Transform3D] = []
 var player: CharacterBody3D
@@ -99,7 +100,7 @@ func _ready() -> void:
     # Target stable 30 FPS on baseline Android hardware. Render the 3D world
     # slightly below native resolution while keeping all HUD elements crisp.
     Engine.max_fps = 60
-    get_viewport().scaling_3d_scale = 0.80
+    get_viewport().scaling_3d_scale = 0.78
     GameState.state_changed.connect(_refresh_ui)
     GameState.toast_requested.connect(_show_toast)
     _create_materials()
@@ -182,20 +183,20 @@ func _ready() -> void:
 
 func _create_materials() -> void:
     mats = {
-        "asphalt": _material(Color("#34383d"), 0.96),
-        "road_line": _material(Color("#e8d58a"), 0.82),
-        "sidewalk": _material(Color("#b7b4aa"), 0.92),
+        "asphalt": _material(Color("#292f35"), 0.94),
+        "road_line": _material(Color("#e8d7a0"), 0.78),
+        "sidewalk": _material(Color("#aaa9a3"), 0.88),
         "grass": _material(Color("#657c55"), 1.0),
         "concrete": _material(Color("#b8b1a2"), 0.95),
-        "cream": _material(Color("#d8c9ac"), 0.9),
-        "blue": _material(Color("#728fa0"), 0.82),
+        "cream": _material(Color("#c9c3b5"), 0.88),
+        "blue": _material(Color("#718b99"), 0.78),
         "brick": _material(Color("#956c58"), 0.95),
-        "glass": _material(Color("#446d7d"), 0.34),
+        "glass": _material(Color("#315b70"), 0.18),
         "dark": _material(Color("#282d31"), 0.9),
         "green": _material(Color("#557d50"), 1.0),
         "skin": _material(Color("#b9825e"), 0.8),
         "player": _material(Color("#315e83"), 0.78),
-        "car": _material(Color("#246b9b"), 0.38),
+        "car": _material(Color("#176fa8"), 0.24),
         "yellow": _material(Color("#e6b94e"), 0.55),
         "white": _material(Color("#e9e5db"), 0.65),
         "red": _material(Color("#a8493e"), 0.8)
@@ -205,6 +206,10 @@ func _material(color: Color, rough: float) -> StandardMaterial3D:
     var result := StandardMaterial3D.new()
     result.albedo_color = color
     result.roughness = rough
+    if color == Color("#315b70"):
+        result.metallic = 0.28
+    elif color == Color("#176fa8"):
+        result.metallic = 0.22
     return result
 
 func _box_mesh(parent: Node3D, size: Vector3, position: Vector3, material: Material, node_name := "Mesh") -> MeshInstance3D:
@@ -258,6 +263,8 @@ func _build_environment() -> void:
     # Real-time shadow maps are disproportionately expensive on entry-level phones.
     # Ambient/fill lighting keeps the scene readable without them.
     sun_light.shadow_enabled = false
+    sun_light.directional_shadow_max_distance = 55.0
+    sun_light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
     add_child(sun_light)
     _update_day_night()
 
@@ -769,12 +776,20 @@ func _build_building(center: Vector3, size: Vector3, facade: Material, index: in
             var wx := (float(column) - 1.0) * size.x * 0.29
             var wy := -size.y * 0.5 + 2.0 + float(row) * 3.2
             # Embed facade glazing slightly into the wall so it never appears to float.
-            window_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(wx, wy, -size.z * 0.5 - 0.045)))
-            window_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(wx, wy, size.z * 0.5 + 0.045)))
             var wz := (float(column) - 1.0) * size.z * 0.29
             var side_basis := Basis(Vector3.UP, PI * 0.5)
-            window_transforms.append(Transform3D(side_basis, center + Vector3(-size.x * 0.5 - 0.045, wy, wz)))
-            window_transforms.append(Transform3D(side_basis, center + Vector3(size.x * 0.5 + 0.045, wy, wz)))
+            var window_faces: Array[Transform3D] = [
+                Transform3D(Basis.IDENTITY, center + Vector3(wx, wy, -size.z * 0.5 - 0.045)),
+                Transform3D(Basis.IDENTITY, center + Vector3(wx, wy, size.z * 0.5 + 0.045)),
+                Transform3D(side_basis, center + Vector3(-size.x * 0.5 - 0.045, wy, wz)),
+                Transform3D(side_basis, center + Vector3(size.x * 0.5 + 0.045, wy, wz))
+            ]
+            for face in window_faces:
+                window_transforms.append(face)
+                facade_frame_transforms.append(Transform3D(face.basis, face.origin + face.basis * Vector3(0.0, 0.59, 0.0)))
+                facade_frame_transforms.append(Transform3D(face.basis, face.origin + face.basis * Vector3(0.0, -0.59, 0.0)))
+                facade_frame_transforms.append(Transform3D(face.basis, face.origin + face.basis * Vector3(-0.82, 0.0, 0.0)))
+                facade_frame_transforms.append(Transform3D(face.basis, face.origin + face.basis * Vector3(0.82, 0.0, 0.0)))
         if row > 0:
             var trim_y := -size.y * 0.5 + 1.0 + float(row) * 3.2
             trim_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(0.0, trim_y, -size.z * 0.5 - 0.02)))
@@ -807,6 +822,9 @@ func _build_window_batch() -> void:
     var trim_mesh := BoxMesh.new()
     trim_mesh.size = Vector3(11.5, 0.13, 0.18)
     _create_multimesh_batch(trim_mesh, mats["white"], trim_transforms, "InstancedFacadeTrims")
+    var frame_mesh := BoxMesh.new()
+    frame_mesh.size = Vector3(0.09, 0.09, 0.13)
+    _create_multimesh_batch(frame_mesh, mats["white"], facade_frame_transforms, "InstancedWindowFrames")
 
 func _build_road_markings() -> void:
     var dash := BoxMesh.new()
@@ -936,9 +954,9 @@ func _build_player() -> void:
     camera.name = "FollowCamera"
     camera.position = player.global_position + Vector3(0.0, 5.0, 8.5)
     camera.current = true
-    camera.fov = 68.0
+    camera.fov = 65.0
     camera.near = 0.1
-    camera.far = 240.0
+    camera.far = 190.0
     add_child(camera)
     camera.look_at(player.global_position + Vector3(0.0, 1.0, 0.0), Vector3.UP)
 
@@ -1460,17 +1478,17 @@ func _update_performance(delta: float) -> void:
     performance_check_time = 0.0
     var fps := Engine.get_frames_per_second()
     var viewport := get_viewport()
-    if fps < 42:
+    if fps < 40:
         low_fps_samples += 1
         high_fps_samples = 0
         if low_fps_samples >= 2 and viewport.scaling_3d_scale > 0.65:
             viewport.scaling_3d_scale = maxf(0.65, viewport.scaling_3d_scale - 0.05)
             low_fps_samples = 0
-    elif fps > 56:
+    elif fps > 54:
         high_fps_samples += 1
         low_fps_samples = 0
-        if high_fps_samples >= 5 and viewport.scaling_3d_scale < 0.85:
-            viewport.scaling_3d_scale = minf(0.85, viewport.scaling_3d_scale + 0.05)
+        if high_fps_samples >= 6 and viewport.scaling_3d_scale < 0.82:
+            viewport.scaling_3d_scale = minf(0.82, viewport.scaling_3d_scale + 0.03)
             high_fps_samples = 0
     else:
         low_fps_samples = 0
