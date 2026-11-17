@@ -17,6 +17,11 @@ var bike_owned: bool = false
 var shop_employee_count: int = 0
 var uncollected_shop_income: int = 0
 var missions_completed: int = 0
+var active_job_stage: int = 0
+var active_job_title: String = ""
+var active_job_reward: int = 0
+var active_job_pickup_position: Vector3 = Vector3.ZERO
+var active_job_destination_position: Vector3 = Vector3.ZERO
 var fuel_percent: float = 100.0
 var player_position: Vector3 = Vector3(0.0, 0.0, 4.5)
 var car_position: Vector3 = Vector3(0.0, 0.72, 0.0)
@@ -213,6 +218,15 @@ func save_game() -> void:
         "shop_employee_count": shop_employee_count,
         "uncollected_shop_income": uncollected_shop_income,
         "missions_completed": missions_completed,
+        "active_job_stage": active_job_stage,
+        "active_job_title": active_job_title,
+        "active_job_reward": active_job_reward,
+        "active_job_pickup_x": active_job_pickup_position.x,
+        "active_job_pickup_y": active_job_pickup_position.y,
+        "active_job_pickup_z": active_job_pickup_position.z,
+        "active_job_destination_x": active_job_destination_position.x,
+        "active_job_destination_y": active_job_destination_position.y,
+        "active_job_destination_z": active_job_destination_position.z,
         "fuel_percent": fuel_percent,
         "player_x": player_position.x,
         "player_y": player_position.y,
@@ -260,6 +274,19 @@ func load_game() -> void:
     shop_employee_count = clampi(int(parsed.get("shop_employee_count", 0)), 0, 3)
     uncollected_shop_income = maxi(0, int(parsed.get("uncollected_shop_income", parsed.get("business_cashflow", 0))))
     missions_completed = maxi(0, int(parsed.get("missions_completed", 0)))
+    active_job_stage = clampi(int(parsed.get("active_job_stage", 0)), 0, 2)
+    active_job_title = str(parsed.get("active_job_title", ""))
+    active_job_reward = maxi(0, int(parsed.get("active_job_reward", 0)))
+    active_job_pickup_position = Vector3(
+        float(parsed.get("active_job_pickup_x", 0.0)),
+        float(parsed.get("active_job_pickup_y", 0.85)),
+        float(parsed.get("active_job_pickup_z", 0.0))
+    )
+    active_job_destination_position = Vector3(
+        float(parsed.get("active_job_destination_x", 0.0)),
+        float(parsed.get("active_job_destination_y", 0.85)),
+        float(parsed.get("active_job_destination_z", 0.0))
+    )
     fuel_percent = clampf(float(parsed.get("fuel_percent", 100.0)), 0.0, 100.0)
     player_position = Vector3(
         float(parsed.get("player_x", 0.0)),
