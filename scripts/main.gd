@@ -75,6 +75,8 @@ var map_panel: PanelContainer
 var minimap_display: Control
 var bank_info: Label
 var job_info: Label
+var courier_job_button: Button
+var heavy_cargo_button: Button
 var phone_info: Label
 var empire_info: Label
 var status_panel: PanelContainer
@@ -1077,8 +1079,8 @@ func _build_panels() -> void:
     job_box.add_child(job_info)
     _add_button(job_box, "FOOD DELIVERY • ₹650", _start_food_job, 280.0)
     _add_button(job_box, "TAXI PICKUP • ₹500", _start_taxi_job, 280.0)
-    _add_button(job_box, "COURIER PARCEL • ₹900 • LEVEL 2", _start_courier_job, 280.0)
-    _add_button(job_box, "HEAVY CARGO • ₹1,600 • LEVEL 3", _start_heavy_cargo_job, 280.0)
+    courier_job_button = _add_button(job_box, "COURIER PARCEL • ₹900", _start_courier_job, 280.0)
+    heavy_cargo_button = _add_button(job_box, "HEAVY CARGO • ₹1,600", _start_heavy_cargo_job, 280.0)
     _add_button(job_box, "CANCEL CURRENT JOB", _cancel_job, 280.0)
     _add_button(job_box, "CLOSE", _hide_panels, 120.0)
     job_panel.hide()
@@ -1608,11 +1610,17 @@ func _refresh_ui() -> void:
         phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nLoan: ₹%d\nPlayer Level: %d  •  XP: %d / %d\nFuel: %d%%  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs completed: %d\nComplete jobs to gain XP and unlock higher-paying work." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), int(round(GameState.fuel_percent)), int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed]
     if is_instance_valid(job_info):
         if job_stage == 0:
-            job_info.text = "Choose a job. Complete pickup and delivery to earn your reward.\nCompleted jobs: %d  •  Player Level: %d\nXP: %d / %d\nCourier unlocks at Level 2; heavy cargo unlocks at Level 3." % [GameState.missions_completed, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level()]
+            var courier_status: String = "AVAILABLE" if GameState.can_accept_job("Courier parcel") else "LOCKED • LEVEL 2"
+            var heavy_status: String = "AVAILABLE" if GameState.can_accept_job("Heavy cargo") else "LOCKED • LEVEL 3"
+            job_info.text = "Choose a job. Complete pickup and delivery to earn your reward.\nCompleted jobs: %d  •  Player Level: %d\nXP: %d / %d\nCourier: %s\nHeavy cargo: %s" % [GameState.missions_completed, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), courier_status, heavy_status]
         else:
             job_info.text = "ACTIVE: %s\nReward: ₹%d\nStep: %s" % [job_title, job_reward_active, "Go to pickup" if job_stage == 1 else "Deliver to destination"]
     if is_instance_valid(bike_button):
         bike_button.text = "MOTORBIKE OWNED • ₹2,500 VALUE" if GameState.bike_owned else "BUY MOTORBIKE • ₹2,500"
+    if is_instance_valid(courier_job_button):
+        courier_job_button.disabled = not GameState.can_accept_job("Courier parcel")
+    if is_instance_valid(heavy_cargo_button):
+        heavy_cargo_button.disabled = not GameState.can_accept_job("Heavy cargo")
     if is_instance_valid(empire_info):
         empire_info.text = "Day %d  •  Player Level: %d\nXP: %d / %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nCorner shop: %s\nShop employees: %d / 3\nShop stock: %d units\nDaily shop income: ₹%d\nMotorbike: %s\nUncollected income: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
             GameState.day_number,
