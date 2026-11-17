@@ -18,9 +18,16 @@ func _initialize() -> void:
     assert(state.wallet == 4500 and state.bank_balance == 500, "Deposit should transfer, not create, money.")
     assert(state.withdraw(200), "Withdrawal should succeed with sufficient bank balance.")
     assert(state.wallet == 4700 and state.bank_balance == 300, "Withdrawal should move money back to wallet.")
+    assert(state.take_loan(2000), "The bank should issue a loan within its limit.")
+    assert(state.wallet == 6700 and state.loan_balance == 2000, "Loan proceeds should reach the wallet and create an equal liability.")
+    assert(state.net_worth() == 5000, "Borrowing money should not increase net worth.")
+    assert(not state.take_loan(1000), "The bank should not issue a second loan while one is outstanding.")
+    assert(state.repay_loan(500), "A partial loan repayment should succeed.")
+    assert(state.wallet == 6200 and state.loan_balance == 1500, "Loan repayment should reduce wallet and debt equally.")
+    assert(state.net_worth() == 5000, "Repaying principal should not change net worth.")
 
     assert(state.buy_home(), "Starter home purchase should succeed.")
-    assert(state.home_owned and state.wallet == 1700, "Home purchase should deduct ₹3,000.")
+    assert(state.home_owned and state.wallet == 3200, "Home purchase should deduct ₹3,000.")
     state.wallet = 5000
     assert(state.buy_bike(), "Motorbike purchase should succeed.")
     assert(state.bike_owned and state.wallet == 2500, "Motorbike purchase should deduct ₹2,500.")
@@ -32,6 +39,7 @@ func _initialize() -> void:
 
     state.advance_day()
     assert(state.uncollected_shop_income == 350, "A staffed shop should accrue ₹350 per day.")
+    assert(state.loan_balance == 1530, "A new day should add 2% daily loan interest, rounded up.")
     assert(state.collect_shop_income(), "Shop income should be collectible.")
     assert(state.wallet == 850 and state.uncollected_shop_income == 0, "Collected income should reach wallet exactly once.")
 
@@ -51,6 +59,7 @@ func _initialize() -> void:
     assert(state.day_number == previous_day + 1, "The simulation clock should roll into the next day.")
     assert(is_equal_approx(state.game_minutes, 1.0), "The simulation clock should wrap to the start of the new day.")
     assert(state.uncollected_shop_income == 350, "The shop should accrue its daily income automatically at day rollover.")
+    assert(state.loan_balance == 1561, "Daily loan interest should compound at automatic day rollover.")
     assert(state.clock_text() == "12:01 AM", "The in-game clock should display the correct 12-hour time.")
     assert(state.hunger_percent < 100.0 and state.energy_percent < 100.0, "Needs should gradually decrease as simulation time passes.")
     state.hunger_percent = 40.0
@@ -63,6 +72,7 @@ func _initialize() -> void:
     assert(is_equal_approx(state.energy_percent, 100.0), "Sleeping should fully restore energy.")
     assert(is_equal_approx(state.hunger_percent, 70.0), "Sleeping should consume 15 hunger points.")
     assert(state.uncollected_shop_income == 700, "Daily business income should accrue on each full day.")
+    assert(state.loan_balance == 1593, "Loan interest should accrue when sleeping advances a day.")
 
     state.set_player_position(Vector3(3.0, 1.0, 9.0))
     state.set_vehicle_state("motorbike", Vector3(12.0, 0.58, 24.0), 1.2, true)
@@ -76,6 +86,7 @@ func _initialize() -> void:
     restored.load_game()
     assert(restored.wallet == state.wallet, "Wallet should persist.")
     assert(restored.bank_balance == state.bank_balance, "Bank balance should persist.")
+    assert(restored.loan_balance == 1593, "Outstanding loan should persist.")
     assert(restored.home_owned and restored.shop_owned, "Owned assets should persist.")
     assert(restored.shop_employee_count == 1, "Shop staffing should persist.")
     assert(restored.bike_owned, "Motorbike ownership should persist.")
