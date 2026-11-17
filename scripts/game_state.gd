@@ -18,6 +18,8 @@ var bike_owned: bool = false
 var shop_employee_count: int = 0
 var uncollected_shop_income: int = 0
 var missions_completed: int = 0
+var hunger_percent: float = 100.0
+var energy_percent: float = 100.0
 var active_job_stage: int = 0
 var active_job_title: String = ""
 var active_job_reward: int = 0
@@ -189,6 +191,8 @@ func advance_clock(real_seconds: float) -> void:
     if real_seconds <= 0.0:
         return
     game_minutes += real_seconds
+    hunger_percent = clampf(hunger_percent - real_seconds * 0.025, 0.0, 100.0)
+    energy_percent = clampf(energy_percent - real_seconds * 0.008, 0.0, 100.0)
     var crossed_day := false
     while game_minutes >= 1440.0:
         game_minutes -= 1440.0
@@ -220,6 +224,41 @@ func advance_day() -> void:
     save_game()
     toast_requested.emit("Day %d started." % day_number)
 
+func buy_meal() -> bool:
+    const MEAL_PRICE := 100
+    if hunger_percent >= 98.0:
+        toast_requested.emit("You are not hungry right now.")
+        return false
+    if wallet < MEAL_PRICE:
+        toast_requested.emit("You need ₹100 to buy a meal.")
+        return false
+    wallet -= MEAL_PRICE
+    hunger_percent = minf(100.0, hunger_percent + 45.0)
+    add_transaction("Bought a meal • -₹100")
+    save_game()
+    toast_requested.emit("Meal purchased. Hunger restored.")
+    return true
+
+func sleep_at_home() -> bool:
+    if not home_owned:
+        toast_requested.emit("Buy a home before using the sleep action.")
+        return false
+    day_number += 1
+    game_minutes = 8.0 * 60.0
+    energy_percent = 100.0
+    hunger_percent = maxf(0.0, hunger_percent - 15.0)
+    if shop_owned:
+        uncollected_shop_income += 250 + shop_employee_count * 100
+    add_transaction("Slept at home • started Day %d" % day_number)
+    save_game()
+    toast_requested.emit("Good morning! Energy restored. Day %d." % day_number)
+    return true
+
+func consume_energy(amount: float) -> void:
+    if amount <= 0.0:
+        return
+    energy_percent = clampf(energy_percent - amount, 0.0, 100.0)
+
 func set_player_position(position: Vector3) -> void:
     player_position = position
 
@@ -247,6 +286,8 @@ func save_game() -> void:
         "shop_employee_count": shop_employee_count,
         "uncollected_shop_income": uncollected_shop_income,
         "missions_completed": missions_completed,
+        "hunger_percent": hunger_percent,
+        "energy_percent": energy_percent,
         "active_job_stage": active_job_stage,
         "active_job_title": active_job_title,
         "active_job_reward": active_job_reward,
@@ -304,6 +345,8 @@ func load_game() -> void:
     shop_employee_count = clampi(int(parsed.get("shop_employee_count", 0)), 0, 3)
     uncollected_shop_income = maxi(0, int(parsed.get("uncollected_shop_income", parsed.get("business_cashflow", 0))))
     missions_completed = maxi(0, int(parsed.get("missions_completed", 0)))
+    hunger_percent = clampf(float(parsed.get("hunger_percent", 100.0)), 0.0, 100.0)
+    energy_percent = clampf(float(parsed.get("energy_percent", 100.0)), 0.0, 100.0)
     active_job_stage = clampi(int(parsed.get("active_job_stage", 0)), 0, 2)
     active_job_title = str(parsed.get("active_job_title", ""))
     active_job_reward = maxi(0, int(parsed.get("active_job_reward", 0)))
