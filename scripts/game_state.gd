@@ -230,6 +230,9 @@ func hire_shop_employee() -> bool:
     if not shop_owned:
         toast_requested.emit("Buy the corner shop before hiring staff.")
         return false
+    if not inside_shop:
+        toast_requested.emit("Enter your shop before hiring employees.")
+        return false
     if shop_employee_count >= 3:
         toast_requested.emit("Your shop is at its staff limit.")
         return false
@@ -246,6 +249,9 @@ func hire_shop_employee() -> bool:
 func collect_shop_income() -> bool:
     if not shop_owned:
         toast_requested.emit("Purchase the corner shop first.")
+        return false
+    if not inside_shop:
+        toast_requested.emit("Enter your shop to collect today's earnings.")
         return false
     if uncollected_shop_income <= 0:
         toast_requested.emit("No shop income to collect yet. Advance a day.")
@@ -346,7 +352,7 @@ func set_vehicle_state(kind: String, position: Vector3, rotation_y: float, is_dr
 
 func save_game() -> void:
     var data := {
-        "version": 8,
+        "version": 9,
         "wallet": wallet,
         "bank_balance": bank_balance,
         "loan_balance": loan_balance,
