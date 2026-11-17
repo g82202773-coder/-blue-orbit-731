@@ -13,7 +13,7 @@ const HOME_DOOR_POSITION := Vector3(100.0, 1.0, 98.0)
 const HOME_INTERIOR_POSITION := Vector3(150.0, 1.0, 150.0)
 const SHOP_DOOR_POSITION := Vector3(-20.0, 1.0, -68.0)
 const SHOP_INTERIOR_POSITION := Vector3(180.0, 1.0, 150.0)
-const APARTMENT_DOOR_POSITION := Vector3(100.0, 1.0, -98.0)
+const APARTMENT_DOOR_POSITION := Vector3(100.0, 1.0, -68.0)
 const APARTMENT_INTERIOR_POSITION := Vector3(150.0, 1.0, -150.0)
 
 var mats: Dictionary = {}
@@ -556,7 +556,7 @@ func _shop_action() -> void:
 func _build_apartment_property() -> void:
     var exterior := Node3D.new()
     exterior.name = "RentalApartmentExterior"
-    exterior.position = Vector3(100.0, 0.0, -90.0)
+    exterior.position = Vector3(100.0, 0.0, -60.0)
     add_child(exterior)
     _static_box(exterior, Vector3(0.45, 7.6, 12.0), Vector3(-7.0, 3.8, 0.0), mats["cream"], "ApartmentWestWall")
     _static_box(exterior, Vector3(0.45, 7.6, 12.0), Vector3(7.0, 3.8, 0.0), mats["cream"], "ApartmentEastWall")
