@@ -43,7 +43,11 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Active mission progress, pickup/drop-off positions, home, apartment and shop interior/return positions, property ownership/rent, shop upgrades, stock holdings, vehicle condition/fuel, simulation time, needs, loans and economy persist through offline JSON save/load, 20-second autosave, and Android application-pause saving.
 
 ## Development status
-This repository is the source of truth for LIFE EMPIRE. Features are added incrementally and must be distinguished as implemented, CI-tested, or device-tested. The last verified Android emulator launch/screenshot baseline is commit `47f83950`; later additions (including the apartment portfolio, timed jobs and vehicle maintenance) still require a fresh successful Godot validation and APK/emulator run. GitHub Actions has recently been failing before exposing runner logs, so the current development head must not be treated as a verified APK. No Android release is considered physically device-tested until it has been installed and exercised on a real phone.
+This repository is the source of truth for LIFE EMPIRE. Features are added incrementally and are not considered verified until the corresponding checks pass.
+
+The last successful Android debug export and emulator launch/screenshot were produced from the older commit `47f83950`. That emulator run confirmed the app stayed alive and rendered a nonblank landscape frame, but used software rendering; it is not evidence of real-phone performance or validation of the newer apartment, stock-market, fuel-station, savings-interest and shop-upgrade systems.
+
+Recent GitHub Actions jobs are failing before a runner is allocated (`runner_id: 0`, with no steps or logs). Therefore the latest source changes—including the new economy and world-geometry smoke tests—are committed but currently unverified by CI. Real-device installation, touch-control testing, save/reload testing and frame-rate measurement on an Android phone are still outstanding.
 
 ## Performance principles
 - Target 30 FPS on baseline Android devices.
