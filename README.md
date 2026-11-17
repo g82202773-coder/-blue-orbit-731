@@ -32,10 +32,11 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Persistent completed-job counter and mission reward history.
 - Fictional wallet and bank with ₹500 deposit/withdraw actions, loans up to ₹5,000, ₹500 repayments, 2% daily compounding interest, debt-aware net worth, and recent transaction records.
 - Purchasable starter home physically placed in Navapura with a furnished bedroom/living/kitchen interior, front-door entry/exit, home signage, and a sleep action that works only while inside.
+- Rental apartment property priced at ₹8,000, physically placed and enterable, with a furnished interior, ₹200 daily rent, inside-apartment rent collection, sleep support and saved ownership/rent balance.
 - Corner-shop business with 25 starter stock units, daily sales affected by staff count, ₹300 restocking for 20 units, inventory valuation in net worth, and collect-income action.
 - Persistent in-game clock (one game minute per real second), day rollover, daily shop income accrual, and a continuous day/night sky and lighting cycle.
-- Survival needs: hunger and energy gradually decline; walking/running drains extra energy, meals restore hunger, and sleeping inside the owned home restores energy and advances the day.
-- Active mission progress, pickup/drop-off positions, home interior/return position, vehicle state, simulation time, needs, loans and economy persist through offline JSON save/load, 20-second autosave, and Android application-pause saving.
+- Survival needs: hunger and energy gradually decline; walking/running drains extra energy, meals restore hunger, and sleeping inside an owned home or apartment restores energy and advances the day.
+- Active mission progress, pickup/drop-off positions, home and apartment interior/return positions, property ownership/rent, vehicle state, simulation time, needs, loans and economy persist through offline JSON save/load, 20-second autosave, and Android application-pause saving.
 
 ## Development status
 This repository is the clean source-of-truth for the new LIFE EMPIRE project. Features are added incrementally and must be distinguished as implemented, CI-tested, or device-tested. Godot 4.7 GitHub Actions import/parse, economy/persistence regression tests, and a 120-frame headless scene smoke test are used for validation. Android emulator screenshot QA is also configured. No Android release is considered physically device-tested until it has been installed and exercised on a real phone.
