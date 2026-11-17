@@ -8,9 +8,11 @@ var destination_position: Vector3 = Vector3.ZERO
 var home_position: Vector3 = Vector3(100.0, 0.0, 104.0)
 var shop_position: Vector3 = Vector3(-20.0, 0.0, 20.0)
 var apartment_position: Vector3 = Vector3(100.0, 0.0, -68.0)
+var fuel_station_position: Vector3 = Vector3(-100.0, 0.0, 40.0)
 var has_home: bool = true
 var has_shop: bool = false
 var has_apartment: bool = true
+var has_fuel_station: bool = true
 var job_stage: int = 0
 
 const CITY_LIMIT := 110.0
@@ -65,6 +67,10 @@ func _draw() -> void:
         var apartment_point := _world_to_map(apartment_position)
         draw_circle(apartment_point, 6.0, Color("#b4a0e8"))
         draw_string(ThemeDB.fallback_font, apartment_point + Vector2(-3.0, 4.0), "A", HORIZONTAL_ALIGNMENT_CENTER, 8.0, 9, Color("#171c24"))
+    if has_fuel_station:
+        var fuel_point := _world_to_map(fuel_station_position)
+        draw_circle(fuel_point, 6.0, Color("#8bcf91"))
+        draw_string(ThemeDB.fallback_font, fuel_point + Vector2(-3.0, 4.0), "F", HORIZONTAL_ALIGNMENT_CENTER, 8.0, 9, Color("#171c24"))
     if has_vehicle:
         draw_circle(_world_to_map(vehicle_position), 5.0, Color("#65b5ed"))
     if job_stage == 1:
@@ -75,4 +81,4 @@ func _draw() -> void:
     draw_circle(_world_to_map(player_position), 6.0, Color("#ffffff"))
     draw_arc(_world_to_map(player_position), 9.0, 0.0, TAU, 24, Color("#6fc8ff"), 2.0)
     draw_string(ThemeDB.fallback_font, Vector2(12.0, 20.0), "NAVAPURA MAP", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 13, Color("#f2f5f7"))
-    draw_string(ThemeDB.fallback_font, Vector2(12.0, size.y - 10.0), "You • Vehicle • Home • Apartment • Shop • Job", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 10, Color("#c5d0d5"))
+    draw_string(ThemeDB.fallback_font, Vector2(12.0, size.y - 10.0), "You • Vehicle • Home • Apartment • Shop • Fuel • Job", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 10, Color("#c5d0d5"))
