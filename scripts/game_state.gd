@@ -202,11 +202,11 @@ func advance_clock(real_seconds: float) -> void:
         toast_requested.emit("A new day has started. Day %d." % day_number)
 
 func clock_text() -> String:
-    var total_minutes := posi(int(floor(game_minutes))) % 1440
-    var hour := total_minutes / 60
-    var minute := total_minutes % 60
-    var suffix := "AM" if hour < 12 else "PM"
-    var display_hour := hour % 12
+    var total_minutes: int = int(floor(game_minutes)) % 1440
+    var hour: int = int(total_minutes / 60)
+    var minute: int = total_minutes % 60
+    var suffix: String = "AM" if hour < 12 else "PM"
+    var display_hour: int = hour % 12
     if display_hour == 0:
         display_hour = 12
     return "%02d:%02d %s" % [display_hour, minute, suffix]
