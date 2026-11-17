@@ -1,4 +1,5 @@
 name: Build Android debug APK
+# Builds a sideloadable debug APK and emulator QA report for phone testing.
 
 on:
   workflow_dispatch:
