@@ -976,7 +976,7 @@ func _build_panels() -> void:
 
     empire_panel = PanelContainer.new()
     empire_panel.position = Vector2(400.0, 100.0)
-    empire_panel.custom_minimum_size = Vector2(480.0, 500.0)
+    empire_panel.custom_minimum_size = Vector2(500.0, 560.0)
     empire_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.08, 0.12, 0.97)))
     hud_layer.add_child(empire_panel)
     var empire_box := VBoxContainer.new()
@@ -990,6 +990,7 @@ func _build_panels() -> void:
     _add_button(empire_box, "ENTER / EXIT HOME", _home_action, 280.0)
     bike_button = _add_button(empire_box, "BUY MOTORBIKE • ₹2,500", _buy_bike, 280.0)
     _add_button(empire_box, "BUY CORNER SHOP • ₹4,000", _buy_shop, 280.0)
+    _add_button(empire_box, "RESTOCK SHOP • ₹300", _restock_shop, 280.0)
     _add_button(empire_box, "HIRE SHOP EMPLOYEE • ₹500", _hire_shop_employee, 280.0)
     _add_button(empire_box, "COLLECT SHOP INCOME", _collect_shop, 280.0)
     _add_button(empire_box, "SLEEP AT HOME", _next_day, 280.0)
@@ -1398,6 +1399,10 @@ func _buy_bike() -> void:
 func _buy_shop() -> void:
     GameState.buy_shop()
 
+func _restock_shop() -> void:
+    if GameState.restock_shop():
+        _refresh_ui()
+
 func _hire_shop_employee() -> void:
     if GameState.hire_shop_employee():
         _refresh_ui()
@@ -1462,14 +1467,15 @@ func _refresh_ui() -> void:
     if is_instance_valid(bike_button):
         bike_button.text = "MOTORBIKE OWNED • ₹2,500 VALUE" if GameState.bike_owned else "BUY MOTORBIKE • ₹2,500"
     if is_instance_valid(empire_info):
-        empire_info.text = "Day %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nCorner shop: %s\nShop employees: %d / 3\nDaily shop income: ₹%d\nMotorbike: %s\nUncollected income: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
+        empire_info.text = "Day %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nCorner shop: %s\nShop employees: %d / 3\nShop stock: %d units\nDaily shop income: ₹%d\nMotorbike: %s\nUncollected income: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
             GameState.day_number,
             GameState.wallet,
             GameState.bank_balance,
             "Owned" if GameState.home_owned else "Not owned",
             "Owned" if GameState.shop_owned else "Not owned",
             GameState.shop_employee_count,
-            250 + GameState.shop_employee_count * 100 if GameState.shop_owned else 0,
+            GameState.shop_stock_units,
+            mini(GameState.shop_stock_units, 5 + GameState.shop_employee_count * 2) * 50 if GameState.shop_owned else 0,
             "Owned" if GameState.bike_owned else "Not owned",
             GameState.uncollected_shop_income,
             GameState.lifetime_earnings,
