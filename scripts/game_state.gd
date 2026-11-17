@@ -16,6 +16,8 @@ var game_minutes: float = 480.0
 var home_owned: bool = false
 var inside_home: bool = false
 var home_return_position: Vector3 = Vector3(0.0, 0.0, 4.5)
+var inside_shop: bool = false
+var shop_return_position: Vector3 = Vector3(0.0, 0.0, 4.5)
 var shop_owned: bool = false
 var bike_owned: bool = false
 var shop_employee_count: int = 0
@@ -207,6 +209,9 @@ func restock_shop() -> bool:
     if not shop_owned:
         toast_requested.emit("Purchase the corner shop before restocking.")
         return false
+    if not inside_shop:
+        toast_requested.emit("Enter your shop before restocking inventory.")
+        return false
     if wallet < 300:
         toast_requested.emit("You need ₹300 to restock the shop.")
         return false
@@ -341,7 +346,7 @@ func set_vehicle_state(kind: String, position: Vector3, rotation_y: float, is_dr
 
 func save_game() -> void:
     var data := {
-        "version": 7,
+        "version": 8,
         "wallet": wallet,
         "bank_balance": bank_balance,
         "loan_balance": loan_balance,
@@ -353,6 +358,10 @@ func save_game() -> void:
         "home_return_x": home_return_position.x,
         "home_return_y": home_return_position.y,
         "home_return_z": home_return_position.z,
+        "inside_shop": inside_shop,
+        "shop_return_x": shop_return_position.x,
+        "shop_return_y": shop_return_position.y,
+        "shop_return_z": shop_return_position.z,
         "shop_owned": shop_owned,
         "bike_owned": bike_owned,
         "shop_employee_count": shop_employee_count,
@@ -419,6 +428,12 @@ func load_game() -> void:
         float(parsed.get("home_return_x", 0.0)),
         float(parsed.get("home_return_y", 0.0)),
         float(parsed.get("home_return_z", 4.5))
+    )
+    inside_shop = bool(parsed.get("inside_shop", false))
+    shop_return_position = Vector3(
+        float(parsed.get("shop_return_x", 0.0)),
+        float(parsed.get("shop_return_y", 0.0)),
+        float(parsed.get("shop_return_z", 4.5))
     )
     shop_owned = bool(parsed.get("shop_owned", parsed.get("business_owned", false)))
     bike_owned = bool(parsed.get("bike_owned", false))
