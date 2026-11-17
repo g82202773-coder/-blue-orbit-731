@@ -1480,7 +1480,11 @@ func _refresh_ui() -> void:
 func _update_minimap() -> void:
     if not is_instance_valid(minimap_display) or not is_instance_valid(player):
         return
-    minimap_display.set("player_position", player.global_position)
+    minimap_display.set("player_position", HOME_DOOR_POSITION if GameState.inside_home else player.global_position)
+    minimap_display.set("home_position", HOME_DOOR_POSITION)
+    minimap_display.set("has_home", true)
+    minimap_display.set("shop_position", Vector3(-20.0, 0.0, 20.0))
+    minimap_display.set("has_shop", GameState.shop_owned)
     var shown_vehicle: Node3D = active_vehicle if driving and is_instance_valid(active_vehicle) else car
     if is_instance_valid(shown_vehicle):
         minimap_display.set("vehicle_position", shown_vehicle.global_position)
