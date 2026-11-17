@@ -46,7 +46,7 @@ func _initialize() -> void:
     assert(is_equal_approx(state.fuel_percent, 87.5), "Driving should consume fuel without going negative.")
 
     state.game_minutes = 1439.0
-    var previous_day := state.day_number
+    var previous_day: int = state.day_number
     state.advance_clock(2.0)
     assert(state.day_number == previous_day + 1, "The simulation clock should roll into the next day.")
     assert(is_equal_approx(state.game_minutes, 1.0), "The simulation clock should wrap to the start of the new day.")
