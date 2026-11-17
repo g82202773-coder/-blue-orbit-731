@@ -202,8 +202,9 @@ func _initialize() -> void:
     timed_state.active_job_stage = 0
     timed_state.active_job_title = ""
     timed_state.active_job_reward = 0
-    timed_state.complete_mission(650, "Food delivery")
-    assert(timed_state.wallet == 1223, "A 75%-remaining delivery should award the base reward plus a proportional 15% time bonus.")
+    var timed_payout: int = timed_state.complete_mission(650, "Food delivery")
+    assert(timed_payout == 723, "Mission completion should return the base reward plus a proportional 15% time bonus.")
+    assert(timed_state.wallet == 1223, "The wallet should receive the returned mission payout.")
     assert(timed_state.active_job_time_remaining == 0.0 and timed_state.missions_completed == 1, "Mission completion should clear its timer and increment the counter.")
 
     timed_state.active_job_stage = 1
