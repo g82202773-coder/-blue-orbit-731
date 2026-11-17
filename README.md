@@ -33,6 +33,7 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Timed deliveries with mission-specific deadlines, failure on timeout, saved countdowns and up to 15% proportional on-time payout bonuses; the completion screen reports the final payout.
 - Persistent completed-job counter and mission reward history.
 - Fictional wallet and bank with ₹500 deposit/withdraw actions, loans up to ₹5,000, ₹500 repayments, 2% daily compounding interest, debt-aware net worth, and recent transaction records.
+- Fictional Navapura share market with MTR, NRE and NCR companies, day-based price movement, share buying/selling, live portfolio valuation in net worth and saved holdings.
 - Purchasable starter home physically placed in Navapura with a furnished bedroom/living/kitchen interior, front-door entry/exit, home signage, and a sleep action that works only while inside.
 - Rental apartment property priced at ₹8,000, physically placed and enterable, with a furnished interior, ₹200 daily rent, inside-apartment rent collection, sleep support and saved ownership/rent balance.
 - Corner-shop business with 25 starter stock units, daily sales affected by staff count, ₹300 restocking for 20 units, inventory valuation in net worth, and collect-income action.
