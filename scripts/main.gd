@@ -1083,9 +1083,13 @@ func _build_panels() -> void:
     empire_panel.custom_minimum_size = Vector2(500.0, 560.0)
     empire_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.08, 0.12, 0.97)))
     hud_layer.add_child(empire_panel)
+    var empire_scroll := ScrollContainer.new()
+    empire_scroll.custom_minimum_size = Vector2(480.0, 520.0)
+    empire_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    empire_panel.add_child(empire_scroll)
     var empire_box := VBoxContainer.new()
     empire_box.add_theme_constant_override("separation", 8)
-    empire_panel.add_child(empire_box)
+    empire_scroll.add_child(empire_box)
     _add_title(empire_box, "LIFE EMPIRE • ASSETS")
     empire_info = Label.new()
     empire_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
