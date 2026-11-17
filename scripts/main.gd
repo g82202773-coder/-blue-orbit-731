@@ -803,7 +803,7 @@ func _build_panels() -> void:
 
     phone_panel = PanelContainer.new()
     phone_panel.position = Vector2(430.0, 120.0)
-    phone_panel.custom_minimum_size = Vector2(420.0, 430.0)
+    phone_panel.custom_minimum_size = Vector2(460.0, 520.0)
     phone_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.08, 0.12, 0.97)))
     hud_layer.add_child(phone_panel)
     var phone_box := VBoxContainer.new()
