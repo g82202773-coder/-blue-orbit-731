@@ -77,8 +77,10 @@ func _initialize() -> void:
     assert(is_equal_approx(state.energy_percent, 100.0), "Sleeping should fully restore energy.")
     assert(is_equal_approx(state.hunger_percent, 70.0), "Sleeping should consume 15 hunger points.")
     assert(state.shop_stock_units == 4, "The shop should have four units left after three trading days.")
+    var net_worth_before_restock: int = state.net_worth()
     assert(state.restock_shop(), "A shop owner should be able to purchase more stock.")
     assert(state.wallet == 800 and state.shop_stock_units == 24, "Restocking should cost ₹300 and add 20 units.")
+    assert(state.net_worth() == net_worth_before_restock, "Restocking should transfer value from cash to inventory without changing net worth.")
     assert(state.uncollected_shop_income == 700, "Daily business income should accrue on each full day.")
     assert(state.loan_balance == 1593, "Loan interest should accrue when sleeping advances a day.")
 
