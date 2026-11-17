@@ -42,16 +42,35 @@ echo "LIFE EMPIRE process PID: $PID"
 # capture the unobstructed game frame.
 adb shell screencap -p /sdcard/life-empire-initial.png
 adb pull /sdcard/life-empire-initial.png build/life-empire-initial.png
-# Use the actual captured landscape screenshot dimensions. The immersive-mode
-# confirmation's "Got it" button is at roughly 73% width and 39% height.
-read -r SCREEN_W SCREEN_H < <(python - <<'PY'
+# Detect Android's blue immersive-mode "Got it" button from the screenshot
+# itself. This is robust to emulator screen sizes and aspect ratios.
+read -r TAP_X TAP_Y < <(python - <<'PY'
 from PIL import Image
-image = Image.open("build/life-empire-initial.png")
-print(image.width, image.height)
+image = Image.open("build/life-empire-initial.png").convert("RGB")
+width, height = image.size
+pixels = image.load()
+points = []
+for y in range(int(height * 0.25), int(height * 0.82)):
+    for x in range(int(width * 0.60), int(width * 0.90)):
+        red, green, blue = pixels[x, y]
+        if 45 <= red <= 115 and 60 <= green <= 140 and 100 <= blue <= 210 and blue > red * 1.25 and green > red * 1.10:
+            points.append((x, y))
+if len(points) >= 8000:
+    left = min(point[0] for point in points)
+    right = max(point[0] for point in points)
+    top = min(point[1] for point in points)
+    bottom = max(point[1] for point in points)
+    print((left + right) // 2, (top + bottom) // 2)
+else:
+    # No confirmation button detected; the game may already be unobstructed.
+    print(-1, -1)
 PY
 )
-if [[ "$SCREEN_W" =~ ^[0-9]+$ && "$SCREEN_H" =~ ^[0-9]+$ ]]; then
-  adb shell input tap "$((SCREEN_W * 73 / 100))" "$((SCREEN_H * 39 / 100))"
+if [[ "$TAP_X" =~ ^[0-9]+$ && "$TAP_Y" =~ ^[0-9]+$ ]] && (( TAP_X >= 0 && TAP_Y >= 0 )); then
+  echo "Dismissing immersive-mode confirmation at $TAP_X,$TAP_Y"
+  adb shell input tap "$TAP_X" "$TAP_Y"
+else
+  echo "No immersive-mode confirmation detected."
 fi
 sleep 5
 
@@ -79,19 +98,30 @@ if image.width <= image.height:
     raise SystemExit(f"Expected landscape screenshot, got {image.width}x{image.height}")
 if initial.size != image.size:
     raise SystemExit(f"Screenshot dimensions changed unexpectedly: {initial.size} -> {image.size}")
+
+def immersive_button_area(frame):
+    width, height = frame.size
+    pixels = frame.load()
+    count = 0
+    for y in range(int(height * 0.25), int(height * 0.82)):
+        for x in range(int(width * 0.60), int(width * 0.90)):
+            red, green, blue = pixels[x, y]
+            if 45 <= red <= 115 and 60 <= green <= 140 and 100 <= blue <= 210 and blue > red * 1.25 and green > red * 1.10:
+                count += 1
+    return count
+
+remaining_button_pixels = immersive_button_area(image)
+if remaining_button_pixels >= 8000:
+    raise SystemExit(f"Android immersive-mode confirmation is still visible ({remaining_button_pixels} blue button pixels).")
 sample = image.resize((96, 54))
 colors = len(set(sample.getdata()))
 before = initial.resize((96, 54))
 diff = ImageChops.difference(before, sample)
 changed = sum(1 for pixel in diff.getdata() if max(pixel) > 18)
 changed_ratio = changed / (96 * 54)
-print(f"Emulator screenshot: {image.width}x{image.height}; sampled colors: {colors}; changed area after dismiss: {changed_ratio:.1%}")
+print(f"Emulator screenshot: {image.width}x{image.height}; sampled colors: {colors}; changed area after prompt dismissal: {changed_ratio:.1%}; remaining confirmation pixels: {remaining_button_pixels}")
 if colors < 40:
     raise SystemExit("Screenshot looks nearly blank; refusing to pass visual startup smoke test.")
-# A fresh emulator displays Android's immersive-mode prompt on first launch.
-# After tapping Got it, a large part of the frame must change to the actual game.
-if changed_ratio < 0.10:
-    raise SystemExit("The launch overlay may still cover the game; dismiss tap was not verified.")
 PY
 
 echo "Android emulator install, launch, process, screenshot and crash-log checks passed."
