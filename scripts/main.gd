@@ -1374,6 +1374,10 @@ func _start_courier_job() -> void:
     _start_job("Courier parcel", 900, Vector3(0.0, 0.85, -40.0), Vector3(80.0, 0.85, 0.0))
 
 func _start_job(title: String, reward: int, pickup_position: Vector3, destination_position: Vector3) -> void:
+    if not GameState.can_accept_job(title):
+        var required_level: int = GameState.required_level_for_job(title)
+        _show_toast("%s unlocks at Player Level %d. Current level: %d." % [title, required_level, GameState.player_level])
+        return
     if job_stage != 0:
         _show_toast("Finish or cancel your current job first.")
         return
@@ -1593,17 +1597,20 @@ func _refresh_ui() -> void:
             recent += "• %s\n" % GameState.transactions[i]
         bank_info.text = "Wallet: ₹%d\nBank: ₹%d\nOutstanding loan: ₹%d\nDaily interest: 2%%\nNet worth: ₹%d\n\nRECENT TRANSACTIONS\n%s" % [GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.net_worth(), recent]
     if is_instance_valid(phone_info):
-        phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nLoan: ₹%d\nFuel: %d%%  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs completed: %d\nBuy meals to restore hunger. Sleep at your home to restore energy." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, GameState.loan_balance, int(round(GameState.fuel_percent)), int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed]
+        phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nLoan: ₹%d\nPlayer Level: %d  •  XP: %d / %d\nFuel: %d%%  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs completed: %d\nComplete jobs to gain XP and unlock higher-paying work." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), int(round(GameState.fuel_percent)), int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed]
     if is_instance_valid(job_info):
         if job_stage == 0:
-            job_info.text = "Choose a job. Complete the pickup and reach the destination to earn your reward.\nCompleted jobs: %d" % GameState.missions_completed
+            job_info.text = "Choose a job. Complete pickup and delivery to earn your reward.\nCompleted jobs: %d  •  Player Level: %d\nXP: %d / %d\nCourier work unlocks at Level 2." % [GameState.missions_completed, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level()]
         else:
             job_info.text = "ACTIVE: %s\nReward: ₹%d\nStep: %s" % [job_title, job_reward_active, "Go to pickup" if job_stage == 1 else "Deliver to destination"]
     if is_instance_valid(bike_button):
         bike_button.text = "MOTORBIKE OWNED • ₹2,500 VALUE" if GameState.bike_owned else "BUY MOTORBIKE • ₹2,500"
     if is_instance_valid(empire_info):
-        empire_info.text = "Day %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nCorner shop: %s\nShop employees: %d / 3\nShop stock: %d units\nDaily shop income: ₹%d\nMotorbike: %s\nUncollected income: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
+        empire_info.text = "Day %d  •  Player Level: %d\nXP: %d / %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nCorner shop: %s\nShop employees: %d / 3\nShop stock: %d units\nDaily shop income: ₹%d\nMotorbike: %s\nUncollected income: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
             GameState.day_number,
+            GameState.player_level,
+            GameState.player_xp,
+            GameState.xp_to_next_level(),
             GameState.wallet,
             GameState.bank_balance,
             "Owned" if GameState.home_owned else "Not owned",
