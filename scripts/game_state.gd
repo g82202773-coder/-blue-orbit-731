@@ -40,7 +40,8 @@ var active_job_title: String = ""
 var active_job_reward: int = 0
 var active_job_pickup_position: Vector3 = Vector3.ZERO
 var active_job_destination_position: Vector3 = Vector3.ZERO
-var fuel_percent: float = 100.0
+var car_fuel_percent: float = 100.0
+var bike_fuel_percent: float = 100.0
 var car_condition_percent: float = 100.0
 var bike_condition_percent: float = 100.0
 var player_position: Vector3 = Vector3(0.0, 0.0, 4.5)
@@ -50,6 +51,12 @@ var bike_position: Vector3 = Vector3(6.0, 0.58, 0.0)
 var bike_rotation_y: float = 0.0
 var was_driving: bool = false
 var active_vehicle_kind: String = "car"
+# Compatibility alias: older scripts/save files used one active-vehicle fuel value.
+var fuel_percent: float:
+    get:
+        return vehicle_fuel(active_vehicle_kind)
+    set(value):
+        set_vehicle_fuel(active_vehicle_kind, value)
 var transactions: Array[String] = []
 
 func _ready() -> void:
@@ -243,10 +250,20 @@ func add_job_experience(amount: int) -> void:
     else:
         toast_requested.emit("+%d job XP. %d / %d to next level." % [amount, player_xp, xp_to_next_level()])
 
-func consume_fuel(amount: float) -> void:
+func vehicle_fuel(kind: String) -> float:
+    return bike_fuel_percent if kind == "motorbike" else car_fuel_percent
+
+func set_vehicle_fuel(kind: String, value: float) -> void:
+    if kind == "motorbike":
+        bike_fuel_percent = clampf(value, 0.0, 100.0)
+    else:
+        car_fuel_percent = clampf(value, 0.0, 100.0)
+
+func consume_fuel(amount: float, kind: String = "") -> void:
     if amount <= 0.0:
         return
-    fuel_percent = clampf(fuel_percent - amount, 0.0, 100.0)
+    var target_kind: String = active_vehicle_kind if kind.is_empty() else kind
+    set_vehicle_fuel(target_kind, vehicle_fuel(target_kind) - amount)
 
 func vehicle_condition(kind: String) -> float:
     return bike_condition_percent if kind == "motorbike" else car_condition_percent
@@ -278,18 +295,19 @@ func repair_vehicle(kind: String) -> bool:
     toast_requested.emit("%s serviced for ₹%d. Condition restored." % [kind.capitalize(), repair_cost])
     return true
 
-func refuel_vehicle() -> bool:
-    if fuel_percent >= 99.9:
-        toast_requested.emit("Your vehicle tank is already full.")
+func refuel_vehicle(kind: String = "") -> bool:
+    var target_kind: String = active_vehicle_kind if kind.is_empty() else kind
+    if vehicle_fuel(target_kind) >= 99.9:
+        toast_requested.emit("Your %s tank is already full." % target_kind)
         return false
     if wallet < 300:
         toast_requested.emit("You need ₹300 to refuel.")
         return false
     wallet -= 300
-    fuel_percent = 100.0
-    add_transaction("Vehicle refuel • -₹300")
+    set_vehicle_fuel(target_kind, 100.0)
+    add_transaction("%s refuel • -₹300" % target_kind.capitalize())
     save_game()
-    toast_requested.emit("Vehicle refuelled to 100%.")
+    toast_requested.emit("%s refuelled to 100%." % target_kind.capitalize())
     return true
 
 func buy_home() -> bool:
@@ -518,7 +536,7 @@ func set_vehicle_state(kind: String, position: Vector3, rotation_y: float, is_dr
 
 func save_game() -> void:
     var data := {
-        "version": 13,
+        "version": 14,
         "wallet": wallet,
         "bank_balance": bank_balance,
         "loan_balance": loan_balance,
@@ -562,7 +580,9 @@ func save_game() -> void:
         "active_job_destination_x": active_job_destination_position.x,
         "active_job_destination_y": active_job_destination_position.y,
         "active_job_destination_z": active_job_destination_position.z,
-        "fuel_percent": fuel_percent,
+        "fuel_percent": car_fuel_percent,
+        "car_fuel_percent": car_fuel_percent,
+        "bike_fuel_percent": bike_fuel_percent,
         "car_condition_percent": car_condition_percent,
         "bike_condition_percent": bike_condition_percent,
         "player_x": player_position.x,
@@ -659,7 +679,8 @@ func load_game() -> void:
     if active_job_stage > 0 and active_job_time_limit <= 0.0:
         active_job_time_limit = job_time_limit_for(active_job_title)
         active_job_time_remaining = active_job_time_limit
-    fuel_percent = clampf(float(parsed.get("fuel_percent", 100.0)), 0.0, 100.0)
+    car_fuel_percent = clampf(float(parsed.get("car_fuel_percent", parsed.get("fuel_percent", 100.0))), 0.0, 100.0)
+    bike_fuel_percent = clampf(float(parsed.get("bike_fuel_percent", 100.0)), 0.0, 100.0)
     car_condition_percent = clampf(float(parsed.get("car_condition_percent", 100.0)), 0.0, 100.0)
     bike_condition_percent = clampf(float(parsed.get("bike_condition_percent", 100.0)), 0.0, 100.0)
     player_position = Vector3(
