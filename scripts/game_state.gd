@@ -25,6 +25,8 @@ var shop_return_position: Vector3 = Vector3(0.0, 0.0, 4.5)
 var shop_owned: bool = false
 var bike_owned: bool = false
 var shop_employee_count: int = 0
+var shop_upgrade_level: int = 0
+var shop_upgrade_investment: int = 0
 var shop_stock_units: int = 0
 var uncollected_shop_income: int = 0
 var missions_completed: int = 0
@@ -72,7 +74,7 @@ func net_worth() -> int:
     if apartment_owned:
         assets += 8000 + uncollected_apartment_rent
     if shop_owned:
-        assets += 4000 + uncollected_shop_income + shop_stock_units * 15
+        assets += 4000 + shop_upgrade_investment + uncollected_shop_income + shop_stock_units * 15
     if bike_owned:
         assets += 2500
     return assets - loan_balance
@@ -214,11 +216,12 @@ func _apply_daily_finances() -> void:
         uncollected_apartment_rent += 200
         add_transaction("Apartment rent accrued +₹200")
     if shop_owned and shop_stock_units > 0:
-        var daily_sales_capacity: int = 5 + shop_employee_count * 2
+        var daily_sales_capacity: int = shop_daily_sales_capacity()
         var units_sold: int = mini(shop_stock_units, daily_sales_capacity)
+        var daily_revenue: int = units_sold * shop_sale_price_per_unit()
         shop_stock_units -= units_sold
-        uncollected_shop_income += units_sold * 50
-        add_transaction("Shop sold %d units • +₹%d" % [units_sold, units_sold * 50])
+        uncollected_shop_income += daily_revenue
+        add_transaction("Shop sold %d units • +₹%d" % [units_sold, daily_revenue])
     if loan_balance > 0:
         var interest: int = maxi(1, int(ceil(float(loan_balance) * 0.02)))
         loan_balance += interest
@@ -460,6 +463,46 @@ func buy_shop() -> bool:
     toast_requested.emit("Your corner shop is open!")
     return true
 
+func shop_upgrade_cost() -> int:
+    match shop_upgrade_level:
+        0:
+            return 2500
+        1:
+            return 5000
+        _:
+            return 0
+
+func shop_stock_capacity() -> int:
+    return 50 + shop_upgrade_level * 25
+
+func shop_daily_sales_capacity() -> int:
+    return 5 + shop_employee_count * 2 + shop_upgrade_level * 5
+
+func shop_sale_price_per_unit() -> int:
+    return 50 + shop_upgrade_level * 10
+
+func upgrade_shop() -> bool:
+    if not shop_owned:
+        toast_requested.emit("Purchase the corner shop before upgrading it.")
+        return false
+    if not inside_shop:
+        toast_requested.emit("Enter your shop before purchasing an upgrade.")
+        return false
+    var cost: int = shop_upgrade_cost()
+    if cost <= 0:
+        toast_requested.emit("Your shop is already fully upgraded.")
+        return false
+    if wallet < cost:
+        toast_requested.emit("You need ₹%d for the next shop upgrade." % cost)
+        return false
+    wallet -= cost
+    shop_upgrade_level += 1
+    shop_upgrade_investment += cost
+    add_transaction("Upgraded shop to Tier %d • -₹%d" % [shop_upgrade_level, cost])
+    save_game()
+    toast_requested.emit("Shop upgraded to Tier %d. Sales capacity and unit prices increased." % shop_upgrade_level)
+    return true
+
 func restock_shop() -> bool:
     if not shop_owned:
         toast_requested.emit("Purchase the corner shop before restocking.")
@@ -470,10 +513,11 @@ func restock_shop() -> bool:
     if wallet < 300:
         toast_requested.emit("You need ₹300 to restock the shop.")
         return false
-    if shop_stock_units >= 50:
+    var capacity: int = shop_stock_capacity()
+    if shop_stock_units >= capacity:
         toast_requested.emit("Your shop inventory is already full.")
         return false
-    var added_units: int = mini(20, 50 - shop_stock_units)
+    var added_units: int = mini(20, capacity - shop_stock_units)
     wallet -= 300
     shop_stock_units += added_units
     add_transaction("Restocked shop • +%d units • -₹300" % added_units)
@@ -610,7 +654,7 @@ func set_vehicle_state(kind: String, position: Vector3, rotation_y: float, is_dr
 
 func save_game() -> void:
     var data := {
-        "version": 17,
+        "version": 18,
         "wallet": wallet,
         "bank_balance": bank_balance,
         "loan_balance": loan_balance,
@@ -635,6 +679,8 @@ func save_game() -> void:
         "shop_owned": shop_owned,
         "bike_owned": bike_owned,
         "shop_employee_count": shop_employee_count,
+        "shop_upgrade_level": shop_upgrade_level,
+        "shop_upgrade_investment": shop_upgrade_investment,
         "shop_stock_units": shop_stock_units,
         "uncollected_shop_income": uncollected_shop_income,
         "missions_completed": missions_completed,
@@ -728,7 +774,9 @@ func load_game() -> void:
     shop_owned = bool(parsed.get("shop_owned", parsed.get("business_owned", false)))
     bike_owned = bool(parsed.get("bike_owned", false))
     shop_employee_count = clampi(int(parsed.get("shop_employee_count", 0)), 0, 3)
-    shop_stock_units = clampi(int(parsed.get("shop_stock_units", 25 if shop_owned else 0)), 0, 50)
+    shop_upgrade_level = clampi(int(parsed.get("shop_upgrade_level", 0)), 0, 2)
+    shop_upgrade_investment = maxi(0, int(parsed.get("shop_upgrade_investment", 0)))
+    shop_stock_units = clampi(int(parsed.get("shop_stock_units", 25 if shop_owned else 0)), 0, 100)
     uncollected_shop_income = maxi(0, int(parsed.get("uncollected_shop_income", parsed.get("business_cashflow", 0))))
     missions_completed = maxi(0, int(parsed.get("missions_completed", 0)))
     missions_failed = maxi(0, int(parsed.get("missions_failed", 0)))
