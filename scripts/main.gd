@@ -370,7 +370,7 @@ func _build_home_property() -> void:
     _box_mesh(home_interior, Vector3(3.8, 0.95, 0.85), Vector3(4.65, 0.8, 4.5), mats["cream"], "KitchenCounter")
     _box_mesh(home_interior, Vector3(1.1, 0.08, 0.6), Vector3(4.65, 1.34, 4.5), mats["dark"], "KitchenCooktop")
     _box_mesh(home_interior, Vector3(0.7, 1.8, 0.7), Vector3(-5.5, 0.9, 3.8), mats["brick"], "Wardrobe")
-    _box_mesh(home_interior, Vector3(3.0, 1.3, 0.12), Vector3(0.0, 2.25, -6.82), mats["glass"], "InteriorWindow")
+    _box_mesh(home_interior, Vector3(0.12, 1.3, 3.0), Vector3(6.82, 2.25, 0.0), mats["glass"], "InteriorWindow")
     var interior_light := StandardMaterial3D.new()
     interior_light.albedo_color = Color("#f1d7a2")
     interior_light.emission_enabled = true
@@ -380,6 +380,9 @@ func _build_home_property() -> void:
     home_interior.hide()
 
 func _enter_home() -> void:
+    if driving:
+        _show_toast("Exit your vehicle before entering your home.")
+        return
     if not GameState.home_owned:
         _show_toast("Purchase the starter home from the Empire menu first.")
         return
