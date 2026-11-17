@@ -40,6 +40,7 @@ var player_animation_clock := 0.0
 var active_vehicle: CharacterBody3D
 var active_vehicle_kind := "car"
 var bike_button: Button
+var shop_upgrade_button: Button
 var camera: Camera3D
 var pickup_marker: Node3D
 var drop_marker: Node3D
@@ -1327,6 +1328,7 @@ func _build_panels() -> void:
     _add_button(empire_box, "ENTER / EXIT SHOP", _shop_action, 280.0)
     bike_button = _add_button(empire_box, "BUY MOTORBIKE • ₹2,500", _buy_bike, 280.0)
     _add_button(empire_box, "BUY CORNER SHOP • ₹4,000", _buy_shop, 280.0)
+    shop_upgrade_button = _add_button(empire_box, "UPGRADE SHOP", _upgrade_shop, 280.0)
     _add_button(empire_box, "RESTOCK SHOP • ₹300", _restock_shop, 280.0)
     _add_button(empire_box, "HIRE SHOP EMPLOYEE • ₹500", _hire_shop_employee, 280.0)
     _add_button(empire_box, "COLLECT SHOP INCOME", _collect_shop, 280.0)
@@ -1845,6 +1847,10 @@ func _buy_bike() -> void:
 func _buy_shop() -> void:
     GameState.buy_shop()
 
+func _upgrade_shop() -> void:
+    if GameState.upgrade_shop():
+        _refresh_ui()
+
 func _restock_shop() -> void:
     if GameState.restock_shop():
         _refresh_ui()
@@ -1927,12 +1933,21 @@ func _refresh_ui() -> void:
             job_info.text = "ACTIVE: %s\nBase reward: ₹%d\nStep: %s\nTIME LEFT: %s\nUp to 15%% on-time bonus." % [job_title, job_reward_active, "Go to pickup" if job_stage == 1 else "Deliver to destination", GameState.job_timer_text()]
     if is_instance_valid(bike_button):
         bike_button.text = "MOTORBIKE OWNED • ₹2,500 VALUE" if GameState.bike_owned else "BUY MOTORBIKE • ₹2,500"
+    if is_instance_valid(shop_upgrade_button):
+        var next_upgrade_cost: int = GameState.shop_upgrade_cost()
+        if not GameState.shop_owned:
+            shop_upgrade_button.text = "BUY THE SHOP FIRST"
+        elif next_upgrade_cost <= 0:
+            shop_upgrade_button.text = "SHOP FULLY UPGRADED"
+        else:
+            shop_upgrade_button.text = "UPGRADE TO TIER %d • ₹%d" % [GameState.shop_upgrade_level + 1, next_upgrade_cost]
+        shop_upgrade_button.disabled = not GameState.shop_owned or not GameState.inside_shop or next_upgrade_cost <= 0 or GameState.wallet < next_upgrade_cost
     if is_instance_valid(courier_job_button):
         courier_job_button.disabled = not GameState.can_accept_job("Courier parcel")
     if is_instance_valid(heavy_cargo_button):
         heavy_cargo_button.disabled = not GameState.can_accept_job("Heavy cargo")
     if is_instance_valid(empire_info):
-        empire_info.text = "Day %d  •  Player Level: %d\nXP: %d / %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nRental apartment: %s\nDaily rent: ₹%d\nUncollected rent: ₹%d\nCorner shop: %s\nShop employees: %d / 3\nShop stock: %d units\nDaily shop income: ₹%d\nMotorbike: %s\nUncollected shop income: ₹%d\nShares: MTR %d • NRE %d • NCR %d\nPortfolio value: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
+        empire_info.text = "Day %d  •  Player Level: %d\nXP: %d / %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nRental apartment: %s\nDaily rent: ₹%d\nUncollected rent: ₹%d\nCorner shop: %s • Tier %d\nShop employees: %d / 3\nShop stock: %d / %d units\nDaily sales capacity: %d units × ₹%d\nProjected daily shop income: ₹%d\nUncollected shop income: ₹%d\nMotorbike: %s\nShares: MTR %d • NRE %d • NCR %d\nPortfolio value: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
             GameState.day_number,
             GameState.player_level,
             GameState.player_xp,
@@ -1944,11 +1959,15 @@ func _refresh_ui() -> void:
             200 if GameState.apartment_owned else 0,
             GameState.uncollected_apartment_rent,
             "Owned" if GameState.shop_owned else "Not owned",
+            GameState.shop_upgrade_level,
             GameState.shop_employee_count,
             GameState.shop_stock_units,
-            mini(GameState.shop_stock_units, 5 + GameState.shop_employee_count * 2) * 50 if GameState.shop_owned else 0,
-            "Owned" if GameState.bike_owned else "Not owned",
+            GameState.shop_stock_capacity(),
+            GameState.shop_daily_sales_capacity(),
+            GameState.shop_sale_price_per_unit(),
+            mini(GameState.shop_stock_units, GameState.shop_daily_sales_capacity()) * GameState.shop_sale_price_per_unit() if GameState.shop_owned else 0,
             GameState.uncollected_shop_income,
+            "Owned" if GameState.bike_owned else "Not owned",
             GameState.shares_mtr,
             GameState.shares_nre,
             GameState.shares_ncr,
