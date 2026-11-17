@@ -1527,8 +1527,8 @@ func _update_job_progress() -> void:
             GameState.active_job_stage = 0
             GameState.active_job_title = ""
             GameState.active_job_reward = 0
-            GameState.complete_mission(completed_reward, completed_title)
-            _show_toast("%s completed. Reward: ₹%d" % [completed_title, completed_reward])
+            var actual_payout: int = GameState.complete_mission(completed_reward, completed_title)
+            _show_toast("%s completed. Final payout: ₹%d" % [completed_title, actual_payout])
             _refresh_ui()
 
 func _job_action() -> void:
