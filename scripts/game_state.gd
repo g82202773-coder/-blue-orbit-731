@@ -9,6 +9,7 @@ const MAX_TRANSACTIONS := 40
 
 var wallet: int = STARTING_WALLET
 var bank_balance: int = 0
+var loan_balance: int = 0
 var lifetime_earnings: int = 0
 var day_number: int = 1
 var game_minutes: float = 480.0
@@ -46,7 +47,7 @@ func net_worth() -> int:
         assets += 4000 + uncollected_shop_income
     if bike_owned:
         assets += 2500
-    return assets
+    return assets - loan_balance
 
 func add_transaction(description: String) -> void:
     var stamp := "Day %d" % day_number
@@ -76,6 +77,46 @@ func withdraw(amount: int) -> bool:
     save_game()
     toast_requested.emit("₹%d withdrawn." % amount)
     return true
+
+func take_loan(amount: int) -> bool:
+    if loan_balance > 0:
+        toast_requested.emit("Repay your current loan before borrowing again.")
+        return false
+    if amount < 500 or amount > 5000 or amount % 500 != 0:
+        toast_requested.emit("Choose a loan between ₹500 and ₹5,000 in ₹500 steps.")
+        return false
+    loan_balance = amount
+    wallet += amount
+    add_transaction("Bank loan received +₹%d" % amount)
+    save_game()
+    toast_requested.emit("₹%d loan received. Daily interest is 2%%." % amount)
+    return true
+
+func repay_loan(amount: int) -> bool:
+    if loan_balance <= 0:
+        toast_requested.emit("You do not have an active loan.")
+        return false
+    if amount <= 0:
+        toast_requested.emit("Enter a valid repayment amount.")
+        return false
+    var payment: int = mini(amount, loan_balance)
+    if wallet < payment:
+        toast_requested.emit("Not enough wallet money for this repayment.")
+        return false
+    wallet -= payment
+    loan_balance -= payment
+    add_transaction("Loan repayment • -₹%d" % payment)
+    save_game()
+    toast_requested.emit("₹%d loan repayment completed." % payment)
+    return true
+
+func _apply_daily_finances() -> void:
+    if shop_owned:
+        uncollected_shop_income += 250 + shop_employee_count * 100
+    if loan_balance > 0:
+        var interest: int = maxi(1, int(ceil(float(loan_balance) * 0.02)))
+        loan_balance += interest
+        add_transaction("Loan interest +₹%d" % interest)
 
 func earn(amount: int, reason: String) -> void:
     if amount <= 0:
@@ -198,9 +239,8 @@ func advance_clock(real_seconds: float) -> void:
         game_minutes -= 1440.0
         day_number += 1
         crossed_day = true
-        if shop_owned:
-            uncollected_shop_income += 250 + shop_employee_count * 100
         add_transaction("Started Day %d" % day_number)
+        _apply_daily_finances()
     if crossed_day:
         save_game()
         toast_requested.emit("A new day has started. Day %d." % day_number)
@@ -218,9 +258,8 @@ func clock_text() -> String:
 func advance_day() -> void:
     day_number += 1
     game_minutes = 8.0 * 60.0
-    if shop_owned:
-        uncollected_shop_income += 250 + shop_employee_count * 100
     add_transaction("Started Day %d" % day_number)
+    _apply_daily_finances()
     save_game()
     toast_requested.emit("Day %d started." % day_number)
 
@@ -247,9 +286,8 @@ func sleep_at_home() -> bool:
     game_minutes = 8.0 * 60.0
     energy_percent = 100.0
     hunger_percent = maxf(0.0, hunger_percent - 15.0)
-    if shop_owned:
-        uncollected_shop_income += 250 + shop_employee_count * 100
     add_transaction("Slept at home • started Day %d" % day_number)
+    _apply_daily_finances()
     save_game()
     toast_requested.emit("Good morning! Energy restored. Day %d." % day_number)
     return true
@@ -277,6 +315,7 @@ func save_game() -> void:
         "version": 3,
         "wallet": wallet,
         "bank_balance": bank_balance,
+        "loan_balance": loan_balance,
         "lifetime_earnings": lifetime_earnings,
         "day_number": day_number,
         "game_minutes": game_minutes,
@@ -336,6 +375,7 @@ func load_game() -> void:
         return
     wallet = maxi(0, int(parsed.get("wallet", STARTING_WALLET)))
     bank_balance = maxi(0, int(parsed.get("bank_balance", parsed.get("bank", 0))))
+    loan_balance = maxi(0, int(parsed.get("loan_balance", 0)))
     lifetime_earnings = maxi(0, int(parsed.get("lifetime_earnings", parsed.get("total_earned", 0))))
     day_number = maxi(1, int(parsed.get("day_number", 1)))
     game_minutes = fposmod(float(parsed.get("game_minutes", 480.0)), 1440.0)
