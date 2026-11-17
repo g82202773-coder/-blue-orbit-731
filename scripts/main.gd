@@ -1273,6 +1273,8 @@ func _refresh_ui() -> void:
     if not is_instance_valid(wallet_label):
         return
     wallet_label.text = "WALLET  ₹%d     BANK  ₹%d" % [GameState.wallet, GameState.bank_balance]
+    if is_instance_valid(time_label):
+        time_label.text = "DAY %d  •  %s" % [GameState.day_number, GameState.clock_text()]
     _update_fuel_hud()
     if is_instance_valid(map_panel) and map_panel.visible:
         _update_minimap()
