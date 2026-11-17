@@ -30,10 +30,11 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Persistent completed-job counter and mission reward history.
 - Fictional wallet and bank with ₹500 deposit/withdraw actions and recent transaction records.
 - Starter home and corner-shop purchases, daily shop income, and collect-income action.
-- Offline JSON save/load, 20-second autosave, and Android application-pause saving.
+- Persistent in-game clock (one game minute per real second), day rollover, daily shop income accrual, and a continuous day/night sky and lighting cycle.
+- Active mission progress, pickup/drop-off positions, vehicle state, simulation time, and economy persist through offline JSON save/load, 20-second autosave, and Android application-pause saving.
 
 ## Development status
-This repository is the clean source-of-truth for the new LIFE EMPIRE project. Features are added incrementally and must be distinguished as implemented, CI-tested, or device-tested. The Godot 4.7 GitHub Actions import/parse and 120-frame headless scene smoke test has passed. No Android APK or release is considered verified until it has been exported and tested on a physical device.
+This repository is the clean source-of-truth for the new LIFE EMPIRE project. Features are added incrementally and must be distinguished as implemented, CI-tested, or device-tested. Godot 4.7 GitHub Actions import/parse, economy/persistence regression tests, and a 120-frame headless scene smoke test are used for validation. Android emulator screenshot QA is also configured. No Android release is considered physically device-tested until it has been installed and exercised on a real phone.
 
 ## Performance principles
 - Target 30 FPS on baseline Android devices.
@@ -49,7 +50,8 @@ This repository is the clean source-of-truth for the new LIFE EMPIRE project. Fe
 4. Smartphone UI and map/garage apps.
 5. Traffic, pedestrian simulation, and city sectors.
 6. Properties, businesses, employees, and recurring income.
-7. Optimization, Android export configuration, and device QA.
+7. Dynamic world simulation, persistent missions, and progression systems.
+8. Optimization, Android export configuration, emulator QA, and physical-device QA.
 
 ## Controls (desktop testing)
 - WASD: Move / steer
