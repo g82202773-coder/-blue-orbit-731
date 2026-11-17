@@ -83,6 +83,14 @@ func _ready() -> void:
     if GameState.bike_owned:
         _build_bike()
     _build_job_markers()
+    job_stage = GameState.active_job_stage
+    job_title = GameState.active_job_title
+    job_reward_active = GameState.active_job_reward
+    if job_stage > 0:
+        pickup_marker.global_position = GameState.active_job_pickup_position
+        drop_marker.global_position = GameState.active_job_destination_position
+        pickup_marker.visible = job_stage == 1
+        drop_marker.visible = job_stage == 2
     _build_hud()
     car.global_position = GameState.car_position
     car.rotation.y = GameState.car_rotation_y
@@ -1029,6 +1037,8 @@ func _update_job_progress() -> void:
     if actor.distance_to(target) < 5.0:
         if job_stage == 1:
             job_stage = 2
+            GameState.active_job_stage = 2
+            GameState.save_game()
             pickup_marker.hide()
             drop_marker.show()
             _show_toast("%s pickup complete. Go to the destination." % job_title)
@@ -1040,6 +1050,9 @@ func _update_job_progress() -> void:
             var completed_reward := job_reward_active
             job_title = ""
             job_reward_active = 0
+            GameState.active_job_stage = 0
+            GameState.active_job_title = ""
+            GameState.active_job_reward = 0
             GameState.complete_mission(completed_reward, completed_title)
             _show_toast("%s completed. Reward: ₹%d" % [completed_title, completed_reward])
             _refresh_ui()
@@ -1068,6 +1081,12 @@ func _start_job(title: String, reward: int, pickup_position: Vector3, destinatio
     pickup_marker.global_position = pickup_position
     drop_marker.global_position = destination_position
     job_stage = 1
+    GameState.active_job_stage = 1
+    GameState.active_job_title = title
+    GameState.active_job_reward = reward
+    GameState.active_job_pickup_position = pickup_position
+    GameState.active_job_destination_position = destination_position
+    GameState.save_game()
     pickup_marker.show()
     drop_marker.hide()
     _hide_panels()
@@ -1081,6 +1100,10 @@ func _cancel_job() -> void:
     job_stage = 0
     job_title = ""
     job_reward_active = 0
+    GameState.active_job_stage = 0
+    GameState.active_job_title = ""
+    GameState.active_job_reward = 0
+    GameState.save_game()
     pickup_marker.hide()
     drop_marker.hide()
     _hide_panels()
