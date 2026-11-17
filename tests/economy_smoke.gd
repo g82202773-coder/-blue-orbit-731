@@ -78,6 +78,14 @@ func _initialize() -> void:
     state.consume_vehicle_condition("motorbike", 10.0)
     assert(is_equal_approx(state.vehicle_condition("motorbike"), 90.0), "Motorbike condition should be tracked separately.")
 
+    var bike_refuel_state = GameStateScript.new()
+    bike_refuel_state.wallet = 500
+    bike_refuel_state.car_fuel_percent = 77.0
+    bike_refuel_state.bike_fuel_percent = 30.0
+    assert(bike_refuel_state.refuel_vehicle("motorbike"), "A motorbike should be refuellable independently.")
+    assert(bike_refuel_state.wallet == 200 and is_equal_approx(bike_refuel_state.bike_fuel_percent, 100.0), "Motorbike refuelling should deduct ₹300 and fill only the bike tank.")
+    assert(is_equal_approx(bike_refuel_state.car_fuel_percent, 77.0), "Motorbike refuelling should leave the car tank unchanged.")
+
     state.game_minutes = 1439.0
     var previous_day: int = state.day_number
     state.advance_clock(2.0)
