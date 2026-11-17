@@ -191,9 +191,9 @@ func fail_active_mission() -> void:
     save_game()
     toast_requested.emit("Mission failed. Time expired; no reward was paid.")
 
-func complete_mission(amount: int, mission_name: String) -> void:
+func complete_mission(amount: int, mission_name: String) -> int:
     if amount <= 0:
-        return
+        return 0
     missions_completed += 1
     var time_bonus: int = 0
     if active_job_time_limit > 0.0 and active_job_time_remaining > 0.0:
@@ -208,6 +208,7 @@ func complete_mission(amount: int, mission_name: String) -> void:
     active_job_time_limit = 0.0
     add_job_experience(xp_reward)
     save_game()
+    return total_payout
 
 func xp_to_next_level() -> int:
     return player_level * 100
