@@ -10,6 +10,7 @@ on:
       - "scenes/**"
       - "scripts/**"
       - "assets/**"
+      - "tests/**"
       - ".github/workflows/android-apk.yml"
       - ".github/scripts/**"
 
