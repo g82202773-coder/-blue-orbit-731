@@ -60,6 +60,7 @@ func _initialize() -> void:
     state.add_job_experience(67)
     assert(state.player_level == 2 and state.player_xp == 0, "Reaching 100 XP should advance the player to Level 2.")
     assert(state.can_accept_job("Courier parcel"), "Courier work should unlock at Level 2.")
+    assert(not state.can_accept_job("Heavy cargo"), "Heavy cargo should stay locked until Level 3.")
     assert(state.xp_to_next_level() == 200, "The XP requirement should increase with the player level.")
 
     state.fuel_percent = 35.0
