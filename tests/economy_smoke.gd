@@ -242,6 +242,47 @@ func _initialize() -> void:
     assert(is_equal_approx(timed_restored.active_job_time_limit, 180.0), "Original mission time limit should persist.")
     assert(timed_restored.missions_failed == 1, "Failed mission count should persist.")
 
+    # Shop expansion: paid upgrades increase stock capacity and daily sales without creating net worth.
+    var upgrade_state = GameStateScript.new()
+    upgrade_state.wallet = 12000
+    upgrade_state.bank_balance = 0
+    upgrade_state.loan_balance = 0
+    upgrade_state.shop_owned = true
+    upgrade_state.inside_shop = false
+    upgrade_state.shop_stock_units = 25
+    upgrade_state.shop_employee_count = 1
+    upgrade_state.shop_upgrade_level = 0
+    upgrade_state.shop_upgrade_investment = 0
+    upgrade_state.uncollected_shop_income = 0
+    var shop_net_worth_before_upgrade: int = upgrade_state.net_worth()
+    assert(not upgrade_state.upgrade_shop(), "Shop upgrades should require entering the shop.")
+    upgrade_state.inside_shop = true
+    assert(upgrade_state.shop_upgrade_cost() == 2500, "The first shop upgrade should cost ₹2,500.")
+    assert(upgrade_state.upgrade_shop(), "A shop owner inside the store should be able to buy Tier 1.")
+    assert(upgrade_state.wallet == 9500 and upgrade_state.shop_upgrade_level == 1, "Tier 1 should deduct ₹2,500 and advance the shop level.")
+    assert(upgrade_state.net_worth() == shop_net_worth_before_upgrade, "Shop upgrades should move cash into business asset value without creating net worth.")
+    assert(upgrade_state.shop_stock_capacity() == 75, "Tier 1 should increase inventory capacity to 75 units.")
+    assert(upgrade_state.shop_daily_sales_capacity() == 12 and upgrade_state.shop_sale_price_per_unit() == 60, "Tier 1 should increase daily sales capacity and unit price.")
+    assert(upgrade_state.restock_shop(), "An upgraded store should be able to restock.")
+    assert(upgrade_state.wallet == 9200 and upgrade_state.shop_stock_units == 45, "Restocking should add 20 units for ₹300.")
+    upgrade_state.advance_day()
+    assert(upgrade_state.shop_stock_units == 33 and upgrade_state.uncollected_shop_income == 720, "Tier 1 should sell 12 units at ₹60 each.")
+    var shop_net_worth_before_tier_two: int = upgrade_state.net_worth()
+    assert(upgrade_state.shop_upgrade_cost() == 5000, "The second shop upgrade should cost ₹5,000.")
+    assert(upgrade_state.upgrade_shop(), "A shop owner should be able to purchase Tier 2.")
+    assert(upgrade_state.wallet == 4200 and upgrade_state.shop_upgrade_level == 2, "Tier 2 should deduct ₹5,000 and advance the shop level.")
+    assert(upgrade_state.net_worth() == shop_net_worth_before_tier_two, "The second upgrade should preserve net worth.")
+    assert(upgrade_state.shop_stock_capacity() == 100, "Tier 2 should increase inventory capacity to 100 units.")
+    assert(upgrade_state.shop_daily_sales_capacity() == 17 and upgrade_state.shop_sale_price_per_unit() == 70, "Tier 2 should increase daily sales capacity and unit price again.")
+    upgrade_state.advance_day()
+    assert(upgrade_state.shop_stock_units == 16 and upgrade_state.uncollected_shop_income == 1910, "Tier 2 should sell 17 units at ₹70 each.")
+    assert(upgrade_state.shop_upgrade_cost() == 0 and not upgrade_state.upgrade_shop(), "A fully upgraded shop should reject further upgrades.")
+    upgrade_state.save_game()
+    var upgrade_restored = GameStateScript.new()
+    upgrade_restored.load_game()
+    assert(upgrade_restored.shop_upgrade_level == 2 and upgrade_restored.shop_upgrade_investment == 7500, "Shop upgrade level and investment should persist.")
+    assert(upgrade_restored.shop_stock_capacity() == 100 and upgrade_restored.shop_stock_units == 16, "Upgraded stock capacity and remaining inventory should persist.")
+
     # Fictional share market: buying/selling transfers value between cash and portfolio.
     var market_state = GameStateScript.new()
     market_state.wallet = 5000
