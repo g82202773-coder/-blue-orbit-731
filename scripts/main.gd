@@ -25,6 +25,8 @@ var home_interior: Node3D
 var home_sign: Label3D
 var shop_interior: Node3D
 var shop_sign: Label3D
+var shop_tier1_visuals: Node3D
+var shop_tier2_visuals: Node3D
 var apartment_interior: Node3D
 var apartment_sign: Label3D
 var window_transforms: Array[Transform3D] = []
@@ -543,7 +545,46 @@ func _build_shop_interior() -> void:
     shop_light.emission = Color("#f4dfa9")
     shop_light.emission_energy_multiplier = 0.45
     _box_mesh(shop_interior, Vector3(1.1, 0.12, 1.1), Vector3(0.0, 3.35, 0.0), shop_light, "ShopCeilingLight")
+
+    # Tier 1 adds two stocked central display racks for the Mini Mart.
+    shop_tier1_visuals = Node3D.new()
+    shop_tier1_visuals.name = "MiniMartDisplays"
+    shop_interior.add_child(shop_tier1_visuals)
+    for rack_x in [-2.7, 2.7]:
+        _box_mesh(shop_tier1_visuals, Vector3(0.62, 1.25, 1.8), Vector3(rack_x, 0.64, 4.55), mats["dark"], "MiniMartDisplayRack")
+        for row in range(2):
+            for column in range(2):
+                var stock_material: Material = mats["yellow"] if (row + column) % 2 == 0 else mats["blue"]
+                _box_mesh(shop_tier1_visuals, Vector3(0.4, 0.34, 0.58), Vector3(rack_x, 0.38 + float(row) * 0.56, 3.95 + float(column) * 0.68), stock_material, "MiniMartProduct")
+    shop_tier1_visuals.hide()
+
+    # Tier 2 adds a produce counter and prominent supermarket sign.
+    shop_tier2_visuals = Node3D.new()
+    shop_tier2_visuals.name = "SupermarketDisplays"
+    shop_interior.add_child(shop_tier2_visuals)
+    _box_mesh(shop_tier2_visuals, Vector3(3.6, 0.9, 1.35), Vector3(0.0, 0.48, 5.25), mats["green"], "SupermarketProduceCounter")
+    for product_x in [-1.25, -0.42, 0.42, 1.25]:
+        _box_mesh(shop_tier2_visuals, Vector3(0.55, 0.28, 0.5), Vector3(product_x, 1.08, 5.15), mats["yellow"], "ProduceDisplay")
+    var supermarket_sign := Label3D.new()
+    supermarket_sign.text = "NAVAPURA SUPERMARKET"
+    supermarket_sign.font_size = 24
+    supermarket_sign.outline_size = 5
+    supermarket_sign.modulate = Color("#fff0b4")
+    supermarket_sign.position = Vector3(0.0, 2.65, 6.65)
+    supermarket_sign.pixel_size = 0.008
+    shop_tier2_visuals.add_child(supermarket_sign)
+    shop_tier2_visuals.hide()
+
+    _refresh_shop_visuals()
     shop_interior.hide()
+
+func _refresh_shop_visuals() -> void:
+    if is_instance_valid(shop_tier1_visuals):
+        shop_tier1_visuals.visible = GameState.shop_upgrade_level >= 1
+    if is_instance_valid(shop_tier2_visuals):
+        shop_tier2_visuals.visible = GameState.shop_upgrade_level >= 2
+    if is_instance_valid(shop_sign):
+        shop_sign.text = "YOUR %s" % GameState.shop_tier_name().to_upper() if GameState.shop_owned else "TEA HOUSE • FOR SALE"
 
 func _enter_shop() -> void:
     if driving:
@@ -1849,6 +1890,7 @@ func _buy_shop() -> void:
 
 func _upgrade_shop() -> void:
     if GameState.upgrade_shop():
+        _refresh_shop_visuals()
         _refresh_ui()
 
 func _restock_shop() -> void:
@@ -1910,7 +1952,7 @@ func _refresh_ui() -> void:
     if is_instance_valid(home_sign):
         home_sign.text = "YOUR STARTER HOME" if GameState.home_owned else "STARTER HOME • ₹3,000"
     if is_instance_valid(shop_sign):
-        shop_sign.text = "YOUR TEA HOUSE" if GameState.shop_owned else "TEA HOUSE • FOR SALE"
+        shop_sign.text = "YOUR %s" % GameState.shop_tier_name().to_upper() if GameState.shop_owned else "TEA HOUSE • FOR SALE"
     if is_instance_valid(apartment_sign):
         apartment_sign.text = "YOUR RENTAL APARTMENT" if GameState.apartment_owned else "APARTMENT • ₹8,000"
     if is_instance_valid(investment_info):
