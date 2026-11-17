@@ -1276,6 +1276,8 @@ func _physics_process(delta: float) -> void:
     if player == null or car == null:
         return
     GameState.advance_clock(delta)
+    if GameState.active_job_stage > 0 and GameState.active_job_time_remaining <= 0.0:
+        _fail_current_job()
     clock_display_time += delta
     if clock_display_time >= 1.0:
         # Sky and lighting materials are expensive to refresh on some mobile
@@ -1563,11 +1565,26 @@ func _start_job(title: String, reward: int, pickup_position: Vector3, destinatio
     GameState.active_job_reward = reward
     GameState.active_job_pickup_position = pickup_position
     GameState.active_job_destination_position = destination_position
+    GameState.start_job_timer(GameState.job_time_limit_for(title))
     GameState.save_game()
     pickup_marker.show()
     drop_marker.hide()
     _hide_panels()
     _show_toast("%s accepted. Follow the yellow pickup marker." % title)
+    _refresh_ui()
+
+func _fail_current_job() -> void:
+    if job_stage == 0:
+        return
+    var failed_title := job_title
+    job_stage = 0
+    job_title = ""
+    job_reward_active = 0
+    GameState.fail_active_mission()
+    pickup_marker.hide()
+    drop_marker.hide()
+    _hide_panels()
+    _show_toast("%s failed. The delivery deadline expired." % failed_title)
     _refresh_ui()
 
 func _cancel_job() -> void:
@@ -1580,6 +1597,7 @@ func _cancel_job() -> void:
     GameState.active_job_stage = 0
     GameState.active_job_title = ""
     GameState.active_job_reward = 0
+    GameState.clear_job_timer()
     GameState.save_game()
     pickup_marker.hide()
     drop_marker.hide()
@@ -1795,14 +1813,14 @@ func _refresh_ui() -> void:
         bank_info.text = "Wallet: ₹%d\nBank: ₹%d\nOutstanding loan: ₹%d\nDaily interest: 2%%\nNet worth: ₹%d\n\nRECENT TRANSACTIONS\n%s" % [GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.net_worth(), recent]
     if is_instance_valid(phone_info):
         var phone_bike_condition: String = "%d%%" % int(round(GameState.bike_condition_percent)) if GameState.bike_owned else "NOT OWNED"
-        phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nLoan: ₹%d\nPlayer Level: %d  •  XP: %d / %d\nFuel: %d%%  •  Car: %d%%\nBike: %s  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs completed: %d\nStand beside a vehicle and service it to restore condition." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), int(round(GameState.fuel_percent)), int(round(GameState.car_condition_percent)), phone_bike_condition, int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed]
+        phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nLoan: ₹%d\nPlayer Level: %d  •  XP: %d / %d\nFuel: %d%%  •  Car: %d%%\nBike: %s  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs: %d complete / %d failed\nStand beside a vehicle and service it to restore condition." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), int(round(GameState.fuel_percent)), int(round(GameState.car_condition_percent)), phone_bike_condition, int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed, GameState.missions_failed]
     if is_instance_valid(job_info):
         if job_stage == 0:
             var courier_status: String = "AVAILABLE" if GameState.can_accept_job("Courier parcel") else "LOCKED • LEVEL 2"
             var heavy_status: String = "AVAILABLE" if GameState.can_accept_job("Heavy cargo") else "LOCKED • LEVEL 3"
-            job_info.text = "Choose a job. Complete pickup and delivery to earn your reward.\nCompleted jobs: %d  •  Player Level: %d\nXP: %d / %d\nCourier: %s\nHeavy cargo: %s" % [GameState.missions_completed, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), courier_status, heavy_status]
+            job_info.text = "Choose a job. Complete pickup and delivery to earn your reward.\nCompleted: %d  •  Failed: %d\nPlayer Level: %d  •  XP: %d / %d\nCourier: %s\nHeavy cargo: %s" % [GameState.missions_completed, GameState.missions_failed, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), courier_status, heavy_status]
         else:
-            job_info.text = "ACTIVE: %s\nReward: ₹%d\nStep: %s" % [job_title, job_reward_active, "Go to pickup" if job_stage == 1 else "Deliver to destination"]
+            job_info.text = "ACTIVE: %s\nBase reward: ₹%d\nStep: %s\nTIME LEFT: %s\nUp to 15%% on-time bonus." % [job_title, job_reward_active, "Go to pickup" if job_stage == 1 else "Deliver to destination", GameState.job_timer_text()]
     if is_instance_valid(bike_button):
         bike_button.text = "MOTORBIKE OWNED • ₹2,500 VALUE" if GameState.bike_owned else "BUY MOTORBIKE • ₹2,500"
     if is_instance_valid(courier_job_button):
