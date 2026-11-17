@@ -1549,7 +1549,7 @@ func _service_vehicle() -> void:
     var bike_distance: float = INF
     if is_instance_valid(bike):
         bike_distance = player.global_position.distance_to(bike.global_position)
-    if mini(car_distance, bike_distance) > 6.0:
+    if minf(car_distance, bike_distance) > 6.0:
         _show_toast("Stand beside your car or motorbike to service it.")
         return
     var kind := "motorbike" if bike_distance < car_distance else "car"
