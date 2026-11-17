@@ -354,7 +354,7 @@ func _build_home_property() -> void:
     home_interior.name = "StarterHomeInterior"
     home_interior.position = Vector3(150.0, 0.0, 150.0)
     add_child(home_interior)
-    _box_mesh(home_interior, Vector3(14.0, 0.18, 14.0), Vector3(0.0, -0.1, 0.0), mats["concrete"], "InteriorFloor")
+    _static_box(home_interior, Vector3(14.0, 0.18, 14.0), Vector3(0.0, -0.1, 0.0), mats["concrete"], "InteriorFloorCollision")
     _box_mesh(home_interior, Vector3(5.8, 3.8, 0.25), Vector3(-4.1, 1.8, -7.0), mats["cream"], "InteriorNorthLeft")
     _box_mesh(home_interior, Vector3(5.8, 3.8, 0.25), Vector3(4.1, 1.8, -7.0), mats["cream"], "InteriorNorthRight")
     _box_mesh(home_interior, Vector3(5.8, 3.8, 0.25), Vector3(-4.1, 1.8, 7.0), mats["cream"], "InteriorSouthLeft")
