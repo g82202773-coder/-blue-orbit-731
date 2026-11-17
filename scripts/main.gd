@@ -1464,9 +1464,9 @@ func _drive_car(delta: float) -> void:
     var keyboard_throttle := float(Input.is_action_pressed("move_forward")) - float(Input.is_action_pressed("move_back"))
     var throttle := throttle_touch if absf(throttle_touch) > 0.01 else keyboard_throttle
     var bike_mode := active_vehicle_kind == "motorbike"
-    if GameState.fuel_percent <= 0.0:
+    if GameState.vehicle_fuel(active_vehicle_kind) <= 0.0:
         if not fuel_empty_notified:
-            _show_toast("Fuel empty. Open PHONE and refuel for ₹300.")
+            _show_toast("Fuel empty. Visit the F marker and refuel this vehicle.")
             fuel_empty_notified = true
         throttle = minf(throttle, 0.0)
         car_speed = move_toward(car_speed, 0.0, 18.0 * delta)
@@ -1504,7 +1504,7 @@ func _drive_car(delta: float) -> void:
     GameState.set_player_position(player.global_position)
     GameState.set_vehicle_state(active_vehicle_kind, active_vehicle.global_position, active_vehicle.rotation.y, true)
     if absf(car_speed) > 0.5:
-        GameState.consume_fuel(delta * (0.08 + absf(car_speed) * 0.004))
+        GameState.consume_fuel(delta * (0.08 + absf(car_speed) * 0.004), active_vehicle_kind)
         GameState.consume_energy(delta * 0.0025)
         GameState.consume_vehicle_condition(active_vehicle_kind, delta * (0.004 + absf(car_speed) * 0.0002))
         _update_fuel_hud()
@@ -1768,7 +1768,8 @@ func _refuel_vehicle() -> void:
     if minf(car_distance, bike_distance) > 8.0:
         _show_toast("Park your car or motorbike beside a fuel pump first.")
         return
-    if GameState.refuel_vehicle():
+    var vehicle_kind: String = "motorbike" if bike_distance < car_distance else "car"
+    if GameState.refuel_vehicle(vehicle_kind):
         fuel_empty_notified = false
         _update_fuel_hud()
         _refresh_ui()
@@ -1868,7 +1869,8 @@ func _refresh_ui() -> void:
         bank_info.text = "Wallet: ₹%d\nBank: ₹%d\nOutstanding loan: ₹%d\nDaily interest: 2%%\nNet worth: ₹%d\n\nRECENT TRANSACTIONS\n%s" % [GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.net_worth(), recent]
     if is_instance_valid(phone_info):
         var phone_bike_condition: String = "%d%%" % int(round(GameState.bike_condition_percent)) if GameState.bike_owned else "NOT OWNED"
-        phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nLoan: ₹%d\nPlayer Level: %d  •  XP: %d / %d\nFuel: %d%%  •  Car: %d%%\nBike: %s  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs: %d complete / %d failed\nRefuel at the F marker with a parked vehicle beside the pump; service vehicles nearby to restore condition." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), int(round(GameState.fuel_percent)), int(round(GameState.car_condition_percent)), phone_bike_condition, int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed, GameState.missions_failed]
+        var phone_bike_fuel: String = "%d%%" % int(round(GameState.bike_fuel_percent)) if GameState.bike_owned else "NOT OWNED"
+        phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nLoan: ₹%d\nPlayer Level: %d  •  XP: %d / %d\nCar fuel: %d%%  •  Car condition: %d%%\nBike fuel: %s  •  Bike condition: %s\nHunger: %d%%  •  Energy: %d%%\nJobs: %d complete / %d failed\nEach vehicle has its own tank. Refuel at the F marker with it parked beside a pump." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), int(round(GameState.car_fuel_percent)), int(round(GameState.car_condition_percent)), phone_bike_fuel, phone_bike_condition, int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed, GameState.missions_failed]
     if is_instance_valid(job_info):
         if job_stage == 0:
             var courier_status: String = "AVAILABLE" if GameState.can_accept_job("Courier parcel") else "LOCKED • LEVEL 2"
@@ -1931,9 +1933,11 @@ func _update_minimap() -> void:
     minimap_display.set("job_stage", job_stage)
 
 func _update_fuel_hud() -> void:
+    var selected_fuel: float = GameState.vehicle_fuel(active_vehicle_kind) if driving else GameState.car_fuel_percent
+    var bike_fuel_text: String = "%d%%" % int(round(GameState.bike_fuel_percent)) if GameState.bike_owned else "—"
     if is_instance_valid(fuel_label):
-        fuel_label.text = "FUEL  %d%%" % int(round(GameState.fuel_percent))
-        fuel_label.modulate = Color("#e4d8a7") if GameState.fuel_percent > 20.0 else Color("#e28b78")
+        fuel_label.text = "FUEL  CAR %d%%  •  BIKE %s" % [int(round(GameState.car_fuel_percent)), bike_fuel_text]
+        fuel_label.modulate = Color("#e4d8a7") if selected_fuel > 20.0 else Color("#e28b78")
     if is_instance_valid(condition_label):
         var bike_condition_text: String = "%d%%" % int(round(GameState.bike_condition_percent)) if GameState.bike_owned else "—"
         condition_label.text = "CAR %d%%  •  BIKE %s" % [int(round(GameState.car_condition_percent)), bike_condition_text]
