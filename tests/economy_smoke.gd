@@ -39,12 +39,14 @@ func _initialize() -> void:
     state.inside_shop = true
     assert(state.hire_shop_employee(), "A shop owner inside the store should be able to hire staff.")
     assert(state.shop_employee_count == 1 and state.wallet == 500, "Hiring an employee should deduct ₹500.")
+    state.inside_shop = false
 
     state.advance_day()
     assert(state.uncollected_shop_income == 350, "A staffed shop should accrue ₹350 per day.")
     assert(state.shop_stock_units == 18, "The shop should sell seven units with one employee.")
     assert(state.loan_balance == 1530, "A new day should add 2% daily loan interest, rounded up.")
     assert(not state.collect_shop_income(), "Collecting revenue should require visiting the shop.")
+    state.inside_shop = true
     assert(state.collect_shop_income(), "A player inside the shop should be able to collect revenue.")
     assert(state.wallet == 850 and state.uncollected_shop_income == 0, "Collected income should reach wallet exactly once.")
     state.inside_shop = false
