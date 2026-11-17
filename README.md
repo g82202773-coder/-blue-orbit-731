@@ -24,7 +24,7 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Third-person on-foot movement, walking/running, and touch D-pad controls.
 - Enterable starter car and purchasable commuter motorbike, with separate arcade handling, acceleration, braking, reverse and steering.
 - Vehicle ownership, transforms and active driving state persist across app restarts.
-- Fuel consumption while driving and a ₹300 phone-based refuelling action that requires parking beside the physical Navapura fuel station (marked F on the map).
+- Independent car and motorbike fuel tanks, fuel consumption while driving, and a ₹300 phone-based refuelling action that requires parking the selected vehicle beside the physical Navapura fuel station (marked F on the map).
 - Separate car/motorbike condition wear, reduced performance on worn vehicles, and proximity-gated service with damage-based repair pricing.
 - Three lightweight moving traffic cars and four looping pedestrians.
 - Rental apartment priced at ₹8,000 with a furnished interior, ₹200 daily rent, inside-apartment rent collection and sleep support; apartment value and uncollected rent appear in net worth.
