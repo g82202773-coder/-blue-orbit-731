@@ -33,6 +33,9 @@ var active_job_time_remaining: float = 0.0
 var active_job_time_limit: float = 0.0
 var player_level: int = 1
 var player_xp: int = 0
+var shares_mtr: int = 0
+var shares_nre: int = 0
+var shares_ncr: int = 0
 var hunger_percent: float = 100.0
 var energy_percent: float = 100.0
 var active_job_stage: int = 0
@@ -63,7 +66,7 @@ func _ready() -> void:
     load_game()
 
 func net_worth() -> int:
-    var assets := wallet + bank_balance
+    var assets := wallet + bank_balance + investment_portfolio_value()
     if home_owned:
         assets += 3000
     if apartment_owned:
@@ -73,6 +76,77 @@ func net_worth() -> int:
     if bike_owned:
         assets += 2500
     return assets - loan_balance
+
+func share_price(ticker: String) -> int:
+    var day_phase: float = float(day_number) * 0.47
+    match ticker:
+        "MTR":
+            return maxi(25, int(round(120.0 + 22.0 * sin(day_phase))))
+        "NRE":
+            return maxi(20, int(round(85.0 + 17.0 * sin(day_phase + 1.55))))
+        "NCR":
+            return maxi(15, int(round(60.0 + 12.0 * sin(day_phase + 2.8))))
+        _:
+            return 0
+
+func share_holding(ticker: String) -> int:
+    match ticker:
+        "MTR":
+            return shares_mtr
+        "NRE":
+            return shares_nre
+        "NCR":
+            return shares_ncr
+        _:
+            return 0
+
+func investment_portfolio_value() -> int:
+    return shares_mtr * share_price("MTR") + shares_nre * share_price("NRE") + shares_ncr * share_price("NCR")
+
+func buy_shares(ticker: String, quantity: int = 1) -> bool:
+    if not ["MTR", "NRE", "NCR"].has(ticker):
+        toast_requested.emit("Unknown company ticker.")
+        return false
+    if quantity < 1 or quantity > 100:
+        toast_requested.emit("Choose between 1 and 100 shares.")
+        return false
+    var total_cost: int = share_price(ticker) * quantity
+    if wallet < total_cost:
+        toast_requested.emit("You need ₹%d to buy %d shares." % [total_cost, quantity])
+        return false
+    wallet -= total_cost
+    match ticker:
+        "MTR":
+            shares_mtr += quantity
+        "NRE":
+            shares_nre += quantity
+        "NCR":
+            shares_ncr += quantity
+    add_transaction("Bought %d %s shares • -₹%d" % [quantity, ticker, total_cost])
+    save_game()
+    toast_requested.emit("Bought %d %s shares for ₹%d." % [quantity, ticker, total_cost])
+    return true
+
+func sell_shares(ticker: String, quantity: int = 1) -> bool:
+    if not ["MTR", "NRE", "NCR"].has(ticker):
+        toast_requested.emit("Unknown company ticker.")
+        return false
+    if quantity < 1 or quantity > share_holding(ticker):
+        toast_requested.emit("You do not own enough %s shares." % ticker)
+        return false
+    var proceeds: int = share_price(ticker) * quantity
+    match ticker:
+        "MTR":
+            shares_mtr -= quantity
+        "NRE":
+            shares_nre -= quantity
+        "NCR":
+            shares_ncr -= quantity
+    wallet += proceeds
+    add_transaction("Sold %d %s shares • +₹%d" % [quantity, ticker, proceeds])
+    save_game()
+    toast_requested.emit("Sold %d %s shares for ₹%d." % [quantity, ticker, proceeds])
+    return true
 
 func add_transaction(description: String) -> void:
     var stamp := "Day %d" % day_number
@@ -536,7 +610,7 @@ func set_vehicle_state(kind: String, position: Vector3, rotation_y: float, is_dr
 
 func save_game() -> void:
     var data := {
-        "version": 15,
+        "version": 16,
         "wallet": wallet,
         "bank_balance": bank_balance,
         "loan_balance": loan_balance,
@@ -569,6 +643,9 @@ func save_game() -> void:
         "active_job_time_limit": active_job_time_limit,
         "player_level": player_level,
         "player_xp": player_xp,
+        "shares_mtr": shares_mtr,
+        "shares_nre": shares_nre,
+        "shares_ncr": shares_ncr,
         "hunger_percent": hunger_percent,
         "energy_percent": energy_percent,
         "active_job_stage": active_job_stage,
@@ -659,6 +736,9 @@ func load_game() -> void:
     active_job_time_remaining = clampf(float(parsed.get("active_job_time_remaining", 0.0)), 0.0, active_job_time_limit)
     player_level = clampi(int(parsed.get("player_level", 1)), 1, 20)
     player_xp = clampi(int(parsed.get("player_xp", 0)), 0, maxi(0, xp_to_next_level() - 1))
+    shares_mtr = maxi(0, int(parsed.get("shares_mtr", 0)))
+    shares_nre = maxi(0, int(parsed.get("shares_nre", 0)))
+    shares_ncr = maxi(0, int(parsed.get("shares_ncr", 0)))
     hunger_percent = clampf(float(parsed.get("hunger_percent", 100.0)), 0.0, 100.0)
     energy_percent = clampf(float(parsed.get("energy_percent", 100.0)), 0.0, 100.0)
     active_job_stage = clampi(int(parsed.get("active_job_stage", 0)), 0, 2)
