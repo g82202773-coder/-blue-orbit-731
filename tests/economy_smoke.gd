@@ -74,7 +74,9 @@ func _initialize() -> void:
     assert(state.uncollected_shop_income == 700, "Daily business income should accrue on each full day.")
     assert(state.loan_balance == 1593, "Loan interest should accrue when sleeping advances a day.")
 
-    state.set_player_position(Vector3(3.0, 1.0, 9.0))
+    state.set_player_position(Vector3(150.0, 1.0, 150.0))
+    state.inside_home = true
+    state.home_return_position = Vector3(100.0, 1.0, 98.0)
     state.set_vehicle_state("motorbike", Vector3(12.0, 0.58, 24.0), 1.2, true)
     state.active_job_stage = 2
     state.active_job_title = "Food delivery"
@@ -88,6 +90,8 @@ func _initialize() -> void:
     assert(restored.bank_balance == state.bank_balance, "Bank balance should persist.")
     assert(restored.loan_balance == 1593, "Outstanding loan should persist.")
     assert(restored.home_owned and restored.shop_owned, "Owned assets should persist.")
+    assert(restored.inside_home, "The saved home interior state should persist.")
+    assert(restored.home_return_position.is_equal_approx(Vector3(100.0, 1.0, 98.0)), "The front-door return position should persist.")
     assert(restored.shop_employee_count == 1, "Shop staffing should persist.")
     assert(restored.bike_owned, "Motorbike ownership should persist.")
     assert(restored.day_number == state.day_number, "Day count should persist.")
@@ -105,7 +109,7 @@ func _initialize() -> void:
     assert(restored.active_vehicle_kind == "motorbike", "Active vehicle type should persist.")
     assert(restored.bike_position.is_equal_approx(Vector3(12.0, 0.58, 24.0)), "Motorbike position should persist.")
     assert(is_equal_approx(restored.bike_rotation_y, 1.2), "Motorbike rotation should persist.")
-    assert(restored.player_position.is_equal_approx(Vector3(3.0, 1.0, 9.0)), "Player position should persist.")
+    assert(restored.player_position.is_equal_approx(Vector3(150.0, 1.0, 150.0)), "Interior player position should persist.")
     assert(is_equal_approx(restored.fuel_percent, 87.5), "Fuel level should persist.")
     print("LIFE EMPIRE economy, mission, vehicle and fuel tests passed.")
     quit(0)
