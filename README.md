@@ -31,6 +31,7 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Fictional wallet and bank with ₹500 deposit/withdraw actions and recent transaction records.
 - Starter home and corner-shop purchases, daily shop income, and collect-income action.
 - Persistent in-game clock (one game minute per real second), day rollover, daily shop income accrual, and a continuous day/night sky and lighting cycle.
+- Survival needs: hunger and energy gradually decline; walking/running drains extra energy, meals restore hunger, and sleeping at an owned home restores energy and advances the day.
 - Active mission progress, pickup/drop-off positions, vehicle state, simulation time, and economy persist through offline JSON save/load, 20-second autosave, and Android application-pause saving.
 
 ## Development status
