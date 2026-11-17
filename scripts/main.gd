@@ -430,6 +430,8 @@ func _enter_home() -> void:
         return
     GameState.home_return_position = player.global_position
     GameState.inside_home = true
+    GameState.inside_shop = false
+    GameState.inside_apartment = false
     GameState.was_driving = false
     driving = false
     active_vehicle = null
@@ -511,6 +513,7 @@ func _enter_shop() -> void:
     GameState.shop_return_position = player.global_position
     GameState.inside_shop = true
     GameState.inside_home = false
+    GameState.inside_apartment = false
     GameState.was_driving = false
     driving = false
     active_vehicle = null
@@ -550,7 +553,7 @@ func _shop_action() -> void:
 func _build_apartment_property() -> void:
     var exterior := Node3D.new()
     exterior.name = "RentalApartmentExterior"
-    exterior.position = Vector3(100.0, 0.0, -104.0)
+    exterior.position = Vector3(100.0, 0.0, -90.0)
     add_child(exterior)
     _static_box(exterior, Vector3(0.45, 7.6, 12.0), Vector3(-7.0, 3.8, 0.0), mats["cream"], "ApartmentWestWall")
     _static_box(exterior, Vector3(0.45, 7.6, 12.0), Vector3(7.0, 3.8, 0.0), mats["cream"], "ApartmentEastWall")
@@ -1804,7 +1807,7 @@ func _refresh_ui() -> void:
     if is_instance_valid(heavy_cargo_button):
         heavy_cargo_button.disabled = not GameState.can_accept_job("Heavy cargo")
     if is_instance_valid(empire_info):
-        empire_info.text = "Day %d  •  Player Level: %d\nXP: %d / %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nCorner shop: %s\nShop employees: %d / 3\nShop stock: %d units\nDaily shop income: ₹%d\nMotorbike: %s\nUncollected income: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
+        empire_info.text = "Day %d  •  Player Level: %d\nXP: %d / %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nRental apartment: %s\nDaily rent: ₹%d\nUncollected rent: ₹%d\nCorner shop: %s\nShop employees: %d / 3\nShop stock: %d units\nDaily shop income: ₹%d\nMotorbike: %s\nUncollected shop income: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
             GameState.day_number,
             GameState.player_level,
             GameState.player_xp,
@@ -1812,6 +1815,9 @@ func _refresh_ui() -> void:
             GameState.wallet,
             GameState.bank_balance,
             "Owned" if GameState.home_owned else "Not owned",
+            "Owned" if GameState.apartment_owned else "Not owned",
+            200 if GameState.apartment_owned else 0,
+            GameState.uncollected_apartment_rent,
             "Owned" if GameState.shop_owned else "Not owned",
             GameState.shop_employee_count,
             GameState.shop_stock_units,
