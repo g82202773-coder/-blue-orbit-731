@@ -1285,6 +1285,8 @@ func _physics_process(delta: float) -> void:
         _update_day_night()
         if is_instance_valid(time_label):
             time_label.text = "DAY %d  •  %s" % [GameState.day_number, GameState.clock_text()]
+        if job_stage > 0 and is_instance_valid(job_panel) and job_panel.visible:
+            _refresh_ui()
         clock_display_time = 0.0
     autosave_time -= delta
     if autosave_time <= 0.0:
