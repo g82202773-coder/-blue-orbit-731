@@ -1919,7 +1919,7 @@ func _refresh_ui() -> void:
         var recent := ""
         for i in range(mini(GameState.transactions.size(), 5)):
             recent += "• %s\n" % GameState.transactions[i]
-        bank_info.text = "Wallet: ₹%d\nBank: ₹%d\nOutstanding loan: ₹%d\nDaily interest: 2%%\nNet worth: ₹%d\n\nRECENT TRANSACTIONS\n%s" % [GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.net_worth(), recent]
+        bank_info.text = "Wallet: ₹%d\nBank: ₹%d\nSavings interest: 0.5%% daily\nOutstanding loan: ₹%d\nLoan interest: 2%% daily\nNet worth: ₹%d\n\nRECENT TRANSACTIONS\n%s" % [GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.net_worth(), recent]
     if is_instance_valid(phone_info):
         var phone_bike_condition: String = "%d%%" % int(round(GameState.bike_condition_percent)) if GameState.bike_owned else "NOT OWNED"
         var phone_bike_fuel: String = "%d%%" % int(round(GameState.bike_fuel_percent)) if GameState.bike_owned else "NOT OWNED"
@@ -1940,7 +1940,7 @@ func _refresh_ui() -> void:
         elif next_upgrade_cost <= 0:
             shop_upgrade_button.text = "SHOP FULLY UPGRADED"
         else:
-            shop_upgrade_button.text = "UPGRADE TO TIER %d • ₹%d" % [GameState.shop_upgrade_level + 1, next_upgrade_cost]
+            shop_upgrade_button.text = "UPGRADE TO %s • ₹%d" % [GameState.shop_next_upgrade_name(), next_upgrade_cost]
         shop_upgrade_button.disabled = not GameState.shop_owned or not GameState.inside_shop or next_upgrade_cost <= 0 or GameState.wallet < next_upgrade_cost
     if is_instance_valid(courier_job_button):
         courier_job_button.disabled = not GameState.can_accept_job("Courier parcel")
@@ -1958,7 +1958,7 @@ func _refresh_ui() -> void:
             "Owned" if GameState.apartment_owned else "Not owned",
             200 if GameState.apartment_owned else 0,
             GameState.uncollected_apartment_rent,
-            "Owned" if GameState.shop_owned else "Not owned",
+            "Owned • %s" % GameState.shop_tier_name() if GameState.shop_owned else "Not owned",
             GameState.shop_upgrade_level,
             GameState.shop_employee_count,
             GameState.shop_stock_units,
