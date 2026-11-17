@@ -47,6 +47,11 @@ func _initialize() -> void:
 
     state.set_player_position(Vector3(3.0, 1.0, 9.0))
     state.set_vehicle_state("motorbike", Vector3(12.0, 0.58, 24.0), 1.2, true)
+    state.active_job_stage = 2
+    state.active_job_title = "Food delivery"
+    state.active_job_reward = 650
+    state.active_job_pickup_position = Vector3(-16.0, 0.85, 0.0)
+    state.active_job_destination_position = Vector3(0.0, 0.85, 40.0)
     state.save_game()
     var restored = GameStateScript.new()
     restored.load_game()
@@ -57,6 +62,11 @@ func _initialize() -> void:
     assert(restored.bike_owned, "Motorbike ownership should persist.")
     assert(restored.day_number == state.day_number, "Day count should persist.")
     assert(restored.missions_completed == 1, "Mission completion count should persist.")
+    assert(restored.active_job_stage == 2, "Active mission delivery stage should persist.")
+    assert(restored.active_job_title == "Food delivery", "Active mission title should persist.")
+    assert(restored.active_job_reward == 650, "Active mission reward should persist.")
+    assert(restored.active_job_pickup_position.is_equal_approx(Vector3(-16.0, 0.85, 0.0)), "Mission pickup location should persist.")
+    assert(restored.active_job_destination_position.is_equal_approx(Vector3(0.0, 0.85, 40.0)), "Mission destination should persist.")
     assert(restored.was_driving, "Active driving state should persist.")
     assert(restored.active_vehicle_kind == "motorbike", "Active vehicle type should persist.")
     assert(restored.bike_position.is_equal_approx(Vector3(12.0, 0.58, 24.0)), "Motorbike position should persist.")
