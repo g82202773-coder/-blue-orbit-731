@@ -188,5 +188,45 @@ func _initialize() -> void:
     assert(apartment_restored.apartment_owned and apartment_restored.inside_apartment, "Apartment ownership and interior state should persist.")
     assert(apartment_restored.apartment_return_position.is_equal_approx(Vector3(100.0, 1.0, -68.0)), "Apartment return position should persist.")
     assert(apartment_restored.uncollected_apartment_rent == 200, "Uncollected apartment rent should persist.")
-    print("LIFE EMPIRE economy, property, mission, vehicle and fuel tests passed.")
+
+    # Timed delivery countdown, on-time bonus, timeout failure and active-job restore.
+    var timed_state = GameStateScript.new()
+    timed_state.wallet = 500
+    timed_state.active_job_stage = 1
+    timed_state.active_job_title = "Food delivery"
+    timed_state.active_job_reward = 650
+    timed_state.start_job_timer(120.0)
+    timed_state.advance_clock(30.0)
+    assert(is_equal_approx(timed_state.active_job_time_remaining, 90.0), "Mission countdown should decrease with real gameplay time.")
+    assert(timed_state.job_timer_text() == "01:30", "Mission countdown should format as minutes and seconds.")
+    timed_state.active_job_stage = 0
+    timed_state.active_job_title = ""
+    timed_state.active_job_reward = 0
+    timed_state.complete_mission(650, "Food delivery")
+    assert(timed_state.wallet == 1223, "A 75%-remaining delivery should award the base reward plus a proportional 15% time bonus.")
+    assert(timed_state.active_job_time_remaining == 0.0 and timed_state.missions_completed == 1, "Mission completion should clear its timer and increment the counter.")
+
+    timed_state.active_job_stage = 1
+    timed_state.active_job_title = "Taxi passenger"
+    timed_state.active_job_reward = 500
+    timed_state.start_job_timer(5.0)
+    timed_state.advance_clock(5.0)
+    assert(timed_state.active_job_time_remaining == 0.0, "An expired mission countdown should reach zero.")
+    timed_state.fail_active_mission()
+    assert(timed_state.missions_failed == 1 and timed_state.active_job_stage == 0, "An expired job should be marked failed and cleared.")
+    assert(timed_state.wallet == 1223, "A failed job should not pay a reward.")
+
+    timed_state.active_job_stage = 1
+    timed_state.active_job_title = "Courier parcel"
+    timed_state.active_job_reward = 900
+    timed_state.start_job_timer(180.0)
+    timed_state.advance_clock(30.0)
+    timed_state.save_game()
+    var timed_restored = GameStateScript.new()
+    timed_restored.load_game()
+    assert(timed_restored.active_job_stage == 1 and timed_restored.active_job_title == "Courier parcel", "An active timed mission should persist.")
+    assert(is_equal_approx(timed_restored.active_job_time_remaining, 150.0), "Remaining mission time should persist.")
+    assert(is_equal_approx(timed_restored.active_job_time_limit, 180.0), "Original mission time limit should persist.")
+    assert(timed_restored.missions_failed == 1, "Failed mission count should persist.")
+    print("LIFE EMPIRE economy, property, timed missions, vehicle and fuel tests passed.")
     quit(0)
