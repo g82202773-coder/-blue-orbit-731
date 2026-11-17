@@ -11,6 +11,9 @@ const PEDESTRIAN_SCRIPT = preload("res://scripts/pedestrian.gd")
 const MINIMAP_SCRIPT = preload("res://scripts/minimap.gd")
 
 var mats: Dictionary = {}
+var game_environment: Environment
+var procedural_sky: ProceduralSkyMaterial
+var sun_light: DirectionalLight3D
 var window_transforms: Array[Transform3D] = []
 var trim_transforms: Array[Transform3D] = []
 var lane_transforms: Array[Transform3D] = []
@@ -51,6 +54,8 @@ var hud_layer: CanvasLayer
 var wallet_label: Label
 var location_label: Label
 var fuel_label: Label
+var time_label: Label
+var clock_display_time := 0.0
 var perf_label: Label
 var toast_label: Label
 var bank_panel: PanelContainer
@@ -168,7 +173,8 @@ func _static_box(parent: Node3D, size: Vector3, position: Vector3, material: Mat
 
 func _build_environment() -> void:
     var world := WorldEnvironment.new()
-    var environment := Environment.new()
+    game_environment = Environment.new()
+    var environment := game_environment
     environment.background_mode = Environment.BG_SKY
     var sky := Sky.new()
     sky.sky_material = ProceduralSkyMaterial.new()
@@ -178,21 +184,22 @@ func _build_environment() -> void:
     environment.ambient_light_energy = 0.82
     environment.ambient_light_color = Color("#c5d0d8")
     environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-    var sky_material := sky.sky_material as ProceduralSkyMaterial
-    sky_material.sky_top_color = Color("#5e8fb8")
-    sky_material.sky_horizon_color = Color("#c7d7df")
-    sky_material.ground_bottom_color = Color("#303c43")
-    sky_material.ground_horizon_color = Color("#a2b1b6")
+    procedural_sky = sky.sky_material as ProceduralSkyMaterial
+    procedural_sky.sky_top_color = Color("#5e8fb8")
+    procedural_sky.sky_horizon_color = Color("#c7d7df")
+    procedural_sky.ground_bottom_color = Color("#303c43")
+    procedural_sky.ground_horizon_color = Color("#a2b1b6")
     world.environment = environment
     add_child(world)
 
-    var sun := DirectionalLight3D.new()
-    sun.rotation_degrees = Vector3(-48.0, -32.0, 0.0)
-    sun.light_energy = 1.15
+    sun_light = DirectionalLight3D.new()
+    sun_light.rotation_degrees = Vector3(-48.0, -32.0, 0.0)
+    sun_light.light_energy = 1.15
     # Real-time shadow maps are disproportionately expensive on entry-level phones.
     # Ambient/fill lighting keeps the scene readable without them.
-    sun.shadow_enabled = false
-    add_child(sun)
+    sun_light.shadow_enabled = false
+    add_child(sun_light)
+    _update_day_night()
 
     _static_box(self, Vector3(CITY_EXTENT, 0.5, CITY_EXTENT), Vector3(0.0, -0.3, 0.0), mats["grass"], "Ground")
 
@@ -648,6 +655,10 @@ func _build_hud() -> void:
     location_label = Label.new()
     location_label.text = "NAVAPURA • ON FOOT"
     status_box.add_child(location_label)
+    time_label = Label.new()
+    time_label.add_theme_font_size_override("font_size", 15)
+    time_label.modulate = Color("#f0dca8")
+    status_box.add_child(time_label)
     fuel_label = Label.new()
     fuel_label.add_theme_font_size_override("font_size", 14)
     fuel_label.modulate = Color("#e4d8a7")
@@ -869,6 +880,13 @@ func _add_title(parent: Node, title_text: String) -> void:
 func _physics_process(delta: float) -> void:
     if player == null or car == null:
         return
+    GameState.advance_clock(delta)
+    _update_day_night()
+    clock_display_time += delta
+    if clock_display_time >= 1.0:
+        if is_instance_valid(time_label):
+            time_label.text = "DAY %d  •  %s" % [GameState.day_number, GameState.clock_text()]
+        clock_display_time = 0.0
     autosave_time -= delta
     if autosave_time <= 0.0:
         _sync_save_state()
@@ -891,6 +909,30 @@ func _physics_process(delta: float) -> void:
         toast_time -= delta
         if toast_time <= 0.0 and is_instance_valid(toast_label):
             toast_label.text = ""
+
+func _update_day_night() -> void:
+    if not is_instance_valid(sun_light) or not is_instance_valid(game_environment) or not is_instance_valid(procedural_sky):
+        return
+    # The simulation runs at one in-game minute per real second: a full day
+    # takes 24 real minutes. Lighting and sky colours blend continuously.
+    var phase := GameState.game_minutes / 1440.0
+    var solar_angle := (phase - 0.25) * TAU
+    var daylight := clampf((sin(solar_angle) + 0.18) / 1.05, 0.035, 1.0)
+    var warm_horizon := Color("#e5a06d")
+    var day_horizon := Color("#c7d7df")
+    var night_horizon := Color("#202b43")
+    var dusk_mix := clampf(1.0 - absf(GameState.game_minutes - 1080.0) / 240.0, 0.0, 1.0)
+    var dawn_mix := clampf(1.0 - absf(GameState.game_minutes - 360.0) / 240.0, 0.0, 1.0)
+    var horizon := night_horizon.lerp(day_horizon, daylight).lerp(warm_horizon, maxf(dusk_mix, dawn_mix) * 0.45)
+    var sky_top := Color("#0d1730").lerp(Color("#5e8fb8"), daylight)
+    procedural_sky.sky_top_color = sky_top
+    procedural_sky.sky_horizon_color = horizon
+    procedural_sky.ground_horizon_color = night_horizon.lerp(Color("#a2b1b6"), daylight)
+    game_environment.ambient_light_color = Color("#253149").lerp(Color("#c5d0d8"), daylight)
+    game_environment.ambient_light_energy = lerpf(0.22, 0.82, daylight)
+    sun_light.light_energy = lerpf(0.04, 1.15, daylight)
+    sun_light.rotation_degrees.x = lerpf(18.0, -58.0, daylight)
+    sun_light.rotation_degrees.y = -32.0 + sin(phase * TAU) * 22.0
 
 func _update_performance(delta: float) -> void:
     performance_check_time += delta
