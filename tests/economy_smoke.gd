@@ -54,6 +54,13 @@ func _initialize() -> void:
     state.complete_mission(650, "Food delivery")
     assert(state.wallet == 1500, "Mission reward should increase wallet.")
     assert(state.missions_completed == 1, "Mission completion should increment the progression counter.")
+    assert(state.player_level == 1 and state.player_xp == 33, "A ₹650 job should award 33 XP without prematurely levelling up.")
+    assert(not state.can_accept_job("Courier parcel"), "Courier work should remain locked below Level 2.")
+    assert(state.required_level_for_job("Heavy cargo") == 3, "Heavy cargo should be a higher-tier job.")
+    state.add_job_experience(67)
+    assert(state.player_level == 2 and state.player_xp == 0, "Reaching 100 XP should advance the player to Level 2.")
+    assert(state.can_accept_job("Courier parcel"), "Courier work should unlock at Level 2.")
+    assert(state.xp_to_next_level() == 200, "The XP requirement should increase with the player level.")
 
     state.fuel_percent = 35.0
     assert(state.refuel_vehicle(), "Refuelling should succeed when the player has ₹300.")
@@ -124,6 +131,8 @@ func _initialize() -> void:
     assert(is_equal_approx(restored.hunger_percent, 70.0), "Hunger should persist after reload.")
     assert(is_equal_approx(restored.energy_percent, 100.0), "Energy should persist after reload.")
     assert(restored.missions_completed == 1, "Mission completion count should persist.")
+    assert(restored.player_level == 2 and restored.player_xp == 0, "Player level and XP should persist.")
+    assert(restored.can_accept_job("Courier parcel"), "Unlocked job tiers should remain unlocked after reload.")
     assert(restored.active_job_stage == 2, "Active mission delivery stage should persist.")
     assert(restored.active_job_title == "Food delivery", "Active mission title should persist.")
     assert(restored.active_job_reward == 650, "Active mission reward should persist.")
