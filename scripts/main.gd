@@ -355,7 +355,8 @@ func _build_home_property() -> void:
     home_interior.position = Vector3(150.0, 0.0, 150.0)
     add_child(home_interior)
     _box_mesh(home_interior, Vector3(14.0, 0.18, 14.0), Vector3(0.0, -0.1, 0.0), mats["concrete"], "InteriorFloor")
-    _box_mesh(home_interior, Vector3(14.0, 3.8, 0.25), Vector3(0.0, 1.8, -7.0), mats["cream"], "InteriorNorthWall")
+    _box_mesh(home_interior, Vector3(5.8, 3.8, 0.25), Vector3(-4.1, 1.8, -7.0), mats["cream"], "InteriorNorthLeft")
+    _box_mesh(home_interior, Vector3(5.8, 3.8, 0.25), Vector3(4.1, 1.8, -7.0), mats["cream"], "InteriorNorthRight")
     _box_mesh(home_interior, Vector3(5.8, 3.8, 0.25), Vector3(-4.1, 1.8, 7.0), mats["cream"], "InteriorSouthLeft")
     _box_mesh(home_interior, Vector3(5.8, 3.8, 0.25), Vector3(4.1, 1.8, 7.0), mats["cream"], "InteriorSouthRight")
     _box_mesh(home_interior, Vector3(0.25, 3.8, 14.0), Vector3(-7.0, 1.8, 0.0), mats["cream"], "InteriorWestWall")
@@ -1422,9 +1423,7 @@ func _sync_save_state() -> void:
         GameState.set_vehicle_state(active_vehicle_kind, active_vehicle.global_position, active_vehicle.rotation.y, true)
     else:
         GameState.was_driving = false
-    if GameState.inside_home:
-        GameState.home_return_position = GameState.home_return_position
-    else:
+    if GameState.inside_home and not GameState.home_owned:
         GameState.inside_home = false
 
 func _save_now() -> void:
