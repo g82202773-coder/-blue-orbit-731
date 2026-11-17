@@ -45,6 +45,14 @@ func _initialize() -> void:
     state.consume_fuel(12.5)
     assert(is_equal_approx(state.fuel_percent, 87.5), "Driving should consume fuel without going negative.")
 
+    state.game_minutes = 1439.0
+    var previous_day := state.day_number
+    state.advance_clock(2.0)
+    assert(state.day_number == previous_day + 1, "The simulation clock should roll into the next day.")
+    assert(is_equal_approx(state.game_minutes, 1.0), "The simulation clock should wrap to the start of the new day.")
+    assert(state.uncollected_shop_income == 350, "The shop should accrue its daily income automatically at day rollover.")
+    assert(state.clock_text() == "12:01 AM", "The in-game clock should display the correct 12-hour time.")
+
     state.set_player_position(Vector3(3.0, 1.0, 9.0))
     state.set_vehicle_state("motorbike", Vector3(12.0, 0.58, 24.0), 1.2, true)
     state.active_job_stage = 2
@@ -61,6 +69,8 @@ func _initialize() -> void:
     assert(restored.shop_employee_count == 1, "Shop staffing should persist.")
     assert(restored.bike_owned, "Motorbike ownership should persist.")
     assert(restored.day_number == state.day_number, "Day count should persist.")
+    assert(is_equal_approx(restored.game_minutes, 1.0), "In-game time should persist.")
+    assert(restored.clock_text() == "12:01 AM", "The saved clock should restore its formatted time.")
     assert(restored.missions_completed == 1, "Mission completion count should persist.")
     assert(restored.active_job_stage == 2, "Active mission delivery stage should persist.")
     assert(restored.active_job_title == "Food delivery", "Active mission title should persist.")
