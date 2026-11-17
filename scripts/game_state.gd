@@ -47,7 +47,7 @@ func net_worth() -> int:
     if home_owned:
         assets += 3000
     if shop_owned:
-        assets += 4000 + uncollected_shop_income
+        assets += 4000 + uncollected_shop_income + shop_stock_units * 15
     if bike_owned:
         assets += 2500
     return assets - loan_balance
