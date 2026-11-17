@@ -19,6 +19,7 @@ var home_return_position: Vector3 = Vector3(0.0, 0.0, 4.5)
 var shop_owned: bool = false
 var bike_owned: bool = false
 var shop_employee_count: int = 0
+var shop_stock_units: int = 0
 var uncollected_shop_income: int = 0
 var missions_completed: int = 0
 var hunger_percent: float = 100.0
@@ -113,8 +114,12 @@ func repay_loan(amount: int) -> bool:
     return true
 
 func _apply_daily_finances() -> void:
-    if shop_owned:
-        uncollected_shop_income += 250 + shop_employee_count * 100
+    if shop_owned and shop_stock_units > 0:
+        var daily_sales_capacity: int = 5 + shop_employee_count * 2
+        var units_sold: int = mini(shop_stock_units, daily_sales_capacity)
+        shop_stock_units -= units_sold
+        uncollected_shop_income += units_sold * 50
+        add_transaction("Shop sold %d units • +₹%d" % [units_sold, units_sold * 50])
     if loan_balance > 0:
         var interest: int = maxi(1, int(ceil(float(loan_balance) * 0.02)))
         loan_balance += interest
@@ -192,9 +197,28 @@ func buy_shop() -> bool:
         return false
     wallet -= 4000
     shop_owned = true
+    shop_stock_units = 25
     add_transaction("Purchased corner shop • -₹4,000")
     save_game()
     toast_requested.emit("Your corner shop is open!")
+    return true
+
+func restock_shop() -> bool:
+    if not shop_owned:
+        toast_requested.emit("Purchase the corner shop before restocking.")
+        return false
+    if wallet < 300:
+        toast_requested.emit("You need ₹300 to restock the shop.")
+        return false
+    if shop_stock_units >= 50:
+        toast_requested.emit("Your shop inventory is already full.")
+        return false
+    var added_units: int = mini(20, 50 - shop_stock_units)
+    wallet -= 300
+    shop_stock_units += added_units
+    add_transaction("Restocked shop • +%d units • -₹300" % added_units)
+    save_game()
+    toast_requested.emit("Shop restocked with %d units." % added_units)
     return true
 
 func hire_shop_employee() -> bool:
@@ -317,7 +341,7 @@ func set_vehicle_state(kind: String, position: Vector3, rotation_y: float, is_dr
 
 func save_game() -> void:
     var data := {
-        "version": 6,
+        "version": 7,
         "wallet": wallet,
         "bank_balance": bank_balance,
         "loan_balance": loan_balance,
@@ -332,6 +356,7 @@ func save_game() -> void:
         "shop_owned": shop_owned,
         "bike_owned": bike_owned,
         "shop_employee_count": shop_employee_count,
+        "shop_stock_units": shop_stock_units,
         "uncollected_shop_income": uncollected_shop_income,
         "missions_completed": missions_completed,
         "hunger_percent": hunger_percent,
@@ -398,6 +423,7 @@ func load_game() -> void:
     shop_owned = bool(parsed.get("shop_owned", parsed.get("business_owned", false)))
     bike_owned = bool(parsed.get("bike_owned", false))
     shop_employee_count = clampi(int(parsed.get("shop_employee_count", 0)), 0, 3)
+    shop_stock_units = clampi(int(parsed.get("shop_stock_units", 25 if shop_owned else 0)), 0, 50)
     uncollected_shop_income = maxi(0, int(parsed.get("uncollected_shop_income", parsed.get("business_cashflow", 0))))
     missions_completed = maxi(0, int(parsed.get("missions_completed", 0)))
     hunger_percent = clampf(float(parsed.get("hunger_percent", 100.0)), 0.0, 100.0)
