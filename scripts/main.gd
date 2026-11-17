@@ -437,6 +437,8 @@ func _enter_home() -> void:
     active_vehicle = null
     car_speed = 0.0
     home_interior.show()
+    shop_interior.hide()
+    apartment_interior.hide()
     player.global_position = HOME_INTERIOR_POSITION
     player.rotation.y = 0.0
     player.velocity = Vector3.ZERO
@@ -520,6 +522,7 @@ func _enter_shop() -> void:
     car_speed = 0.0
     shop_interior.show()
     home_interior.hide()
+    apartment_interior.hide()
     player.global_position = SHOP_INTERIOR_POSITION
     player.rotation.y = 0.0
     player.velocity = Vector3.ZERO
@@ -1258,7 +1261,7 @@ func _build_panels() -> void:
     _add_button(empire_box, "RESTOCK SHOP • ₹300", _restock_shop, 280.0)
     _add_button(empire_box, "HIRE SHOP EMPLOYEE • ₹500", _hire_shop_employee, 280.0)
     _add_button(empire_box, "COLLECT SHOP INCOME", _collect_shop, 280.0)
-    _add_button(empire_box, "SLEEP AT HOME", _next_day, 280.0)
+    _add_button(empire_box, "SLEEP / NEXT DAY", _next_day, 280.0)
     _add_button(empire_box, "CLOSE", _hide_panels, 120.0)
     empire_panel.hide()
 
