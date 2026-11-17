@@ -28,6 +28,9 @@ var shop_employee_count: int = 0
 var shop_stock_units: int = 0
 var uncollected_shop_income: int = 0
 var missions_completed: int = 0
+var missions_failed: int = 0
+var active_job_time_remaining: float = 0.0
+var active_job_time_limit: float = 0.0
 var player_level: int = 1
 var player_xp: int = 0
 var hunger_percent: float = 100.0
@@ -149,13 +152,62 @@ func earn(amount: int, reason: String) -> void:
     save_game()
     toast_requested.emit("You earned ₹%d." % amount)
 
+func job_time_limit_for(job_title: String) -> float:
+    match job_title:
+        "Taxi passenger":
+            return 180.0
+        "Courier parcel":
+            return 240.0
+        "Heavy cargo":
+            return 300.0
+        _:
+            return 210.0
+
+func start_job_timer(duration_seconds: float) -> void:
+    active_job_time_limit = maxf(1.0, duration_seconds)
+    active_job_time_remaining = active_job_time_limit
+    save_game()
+
+func clear_job_timer() -> void:
+    active_job_time_remaining = 0.0
+    active_job_time_limit = 0.0
+    save_game()
+
+func job_timer_text() -> String:
+    var total_seconds: int = maxi(0, int(ceil(active_job_time_remaining)))
+    var minutes: int = int(total_seconds / 60)
+    var seconds: int = total_seconds % 60
+    return "%02d:%02d" % [minutes, seconds]
+
+func fail_active_mission() -> void:
+    if active_job_stage == 0:
+        return
+    missions_failed += 1
+    add_transaction("%s failed • time expired" % active_job_title)
+    active_job_stage = 0
+    active_job_title = ""
+    active_job_reward = 0
+    clear_job_timer()
+    save_game()
+    toast_requested.emit("Mission failed. Time expired; no reward was paid.")
+
 func complete_mission(amount: int, mission_name: String) -> void:
     if amount <= 0:
         return
     missions_completed += 1
-    earn(amount, "%s completed" % mission_name)
-    var xp_reward: int = maxi(25, int(round(float(amount) / 20.0)))
+    var time_bonus: int = 0
+    if active_job_time_limit > 0.0 and active_job_time_remaining > 0.0:
+        var remaining_ratio: float = clampf(active_job_time_remaining / active_job_time_limit, 0.0, 1.0)
+        time_bonus = int(round(float(amount) * 0.15 * remaining_ratio))
+    var total_payout: int = amount + time_bonus
+    earn(total_payout, "%s completed" % mission_name)
+    if time_bonus > 0:
+        add_transaction("On-time delivery bonus +₹%d" % time_bonus)
+    var xp_reward: int = maxi(25, int(round(float(total_payout) / 20.0)))
+    active_job_time_remaining = 0.0
+    active_job_time_limit = 0.0
     add_job_experience(xp_reward)
+    save_game()
 
 func xp_to_next_level() -> int:
     return player_level * 100
@@ -381,6 +433,8 @@ func advance_clock(real_seconds: float) -> void:
     game_minutes += real_seconds
     hunger_percent = clampf(hunger_percent - real_seconds * 0.025, 0.0, 100.0)
     energy_percent = clampf(energy_percent - real_seconds * 0.008, 0.0, 100.0)
+    if active_job_stage > 0 and active_job_time_remaining > 0.0:
+        active_job_time_remaining = maxf(0.0, active_job_time_remaining - real_seconds)
     var crossed_day := false
     while game_minutes >= 1440.0:
         game_minutes -= 1440.0
@@ -463,7 +517,7 @@ func set_vehicle_state(kind: String, position: Vector3, rotation_y: float, is_dr
 
 func save_game() -> void:
     var data := {
-        "version": 12,
+        "version": 13,
         "wallet": wallet,
         "bank_balance": bank_balance,
         "loan_balance": loan_balance,
@@ -491,6 +545,9 @@ func save_game() -> void:
         "shop_stock_units": shop_stock_units,
         "uncollected_shop_income": uncollected_shop_income,
         "missions_completed": missions_completed,
+        "missions_failed": missions_failed,
+        "active_job_time_remaining": active_job_time_remaining,
+        "active_job_time_limit": active_job_time_limit,
         "player_level": player_level,
         "player_xp": player_xp,
         "hunger_percent": hunger_percent,
@@ -576,6 +633,9 @@ func load_game() -> void:
     shop_stock_units = clampi(int(parsed.get("shop_stock_units", 25 if shop_owned else 0)), 0, 50)
     uncollected_shop_income = maxi(0, int(parsed.get("uncollected_shop_income", parsed.get("business_cashflow", 0))))
     missions_completed = maxi(0, int(parsed.get("missions_completed", 0)))
+    missions_failed = maxi(0, int(parsed.get("missions_failed", 0)))
+    active_job_time_limit = maxf(0.0, float(parsed.get("active_job_time_limit", 0.0)))
+    active_job_time_remaining = clampf(float(parsed.get("active_job_time_remaining", 0.0)), 0.0, active_job_time_limit)
     player_level = clampi(int(parsed.get("player_level", 1)), 1, 20)
     player_xp = clampi(int(parsed.get("player_xp", 0)), 0, maxi(0, xp_to_next_level() - 1))
     hunger_percent = clampf(float(parsed.get("hunger_percent", 100.0)), 0.0, 100.0)
