@@ -1932,7 +1932,7 @@ func _refresh_ui() -> void:
     if is_instance_valid(heavy_cargo_button):
         heavy_cargo_button.disabled = not GameState.can_accept_job("Heavy cargo")
     if is_instance_valid(empire_info):
-        empire_info.text = "Day %d  •  Player Level: %d\nXP: %d / %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nRental apartment: %s\nDaily rent: ₹%d\nUncollected rent: ₹%d\nCorner shop: %s\nShop employees: %d / 3\nShop stock: %d units\nDaily shop income: ₹%d\nMotorbike: %s\nUncollected shop income: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
+        empire_info.text = "Day %d  •  Player Level: %d\nXP: %d / %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nRental apartment: %s\nDaily rent: ₹%d\nUncollected rent: ₹%d\nCorner shop: %s\nShop employees: %d / 3\nShop stock: %d units\nDaily shop income: ₹%d\nMotorbike: %s\nUncollected shop income: ₹%d\nShares: MTR %d • NRE %d • NCR %d\nPortfolio value: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
             GameState.day_number,
             GameState.player_level,
             GameState.player_xp,
@@ -1949,6 +1949,10 @@ func _refresh_ui() -> void:
             mini(GameState.shop_stock_units, 5 + GameState.shop_employee_count * 2) * 50 if GameState.shop_owned else 0,
             "Owned" if GameState.bike_owned else "Not owned",
             GameState.uncollected_shop_income,
+            GameState.shares_mtr,
+            GameState.shares_nre,
+            GameState.shares_ncr,
+            GameState.investment_portfolio_value(),
             GameState.lifetime_earnings,
             GameState.loan_balance,
             GameState.net_worth()
