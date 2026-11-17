@@ -28,7 +28,7 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Three lightweight moving traffic cars and four looping pedestrians.
 - Job board with food delivery (₹650), taxi pickup (₹500) and courier parcel (₹900) missions, each with separate pickup/drop-off routes.
 - Persistent completed-job counter and mission reward history.
-- Fictional wallet and bank with ₹500 deposit/withdraw actions and recent transaction records.
+- Fictional wallet and bank with ₹500 deposit/withdraw actions, loans up to ₹5,000, ₹500 repayments, 2% daily compounding interest, debt-aware net worth, and recent transaction records.
 - Starter home and corner-shop purchases, daily shop income, and collect-income action.
 - Persistent in-game clock (one game minute per real second), day rollover, daily shop income accrual, and a continuous day/night sky and lighting cycle.
 - Survival needs: hunger and energy gradually decline; walking/running drains extra energy, meals restore hunger, and sleeping at an owned home restores energy and advances the day.
