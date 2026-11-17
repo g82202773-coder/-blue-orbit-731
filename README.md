@@ -27,9 +27,10 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Fuel consumption while driving and a ₹300 phone-based refuelling action.
 - Separate car/motorbike condition wear, reduced performance on worn vehicles, and proximity-gated service with damage-based repair pricing.
 - Three lightweight moving traffic cars and four looping pedestrians.
+- Rental apartment priced at ₹8,000 with a furnished interior, ₹200 daily rent, inside-apartment rent collection and sleep support; apartment value and uncollected rent appear in net worth.
 - Job board with food delivery (₹650), taxi pickup (₹500), courier parcel (₹900) and heavy cargo (₹1,600) missions, each with separate pickup/drop-off routes.
 - Job progression with XP rewards, persistent player levels, Level 2 courier unlock and Level 3 heavy-cargo unlock.
-- Timed deliveries with mission-specific deadlines, failure on timeout, saved countdowns and up to 15% proportional on-time payout bonuses.
+- Timed deliveries with mission-specific deadlines, failure on timeout, saved countdowns and up to 15% proportional on-time payout bonuses; the completion screen reports the final payout.
 - Persistent completed-job counter and mission reward history.
 - Fictional wallet and bank with ₹500 deposit/withdraw actions, loans up to ₹5,000, ₹500 repayments, 2% daily compounding interest, debt-aware net worth, and recent transaction records.
 - Purchasable starter home physically placed in Navapura with a furnished bedroom/living/kitchen interior, front-door entry/exit, home signage, and a sleep action that works only while inside.
@@ -40,7 +41,7 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Active mission progress, pickup/drop-off positions, home and apartment interior/return positions, property ownership/rent, vehicle state, simulation time, needs, loans and economy persist through offline JSON save/load, 20-second autosave, and Android application-pause saving.
 
 ## Development status
-This repository is the clean source-of-truth for the new LIFE EMPIRE project. Features are added incrementally and must be distinguished as implemented, CI-tested, or device-tested. Godot 4.7 GitHub Actions import/parse, economy/persistence regression tests, and a 120-frame headless scene smoke test are used for validation. Android emulator screenshot QA is also configured. No Android release is considered physically device-tested until it has been installed and exercised on a real phone.
+This repository is the source of truth for LIFE EMPIRE. Features are added incrementally and must be distinguished as implemented, CI-tested, or device-tested. The last verified Android emulator launch/screenshot baseline is commit `47f83950`; later additions (including the apartment portfolio, timed jobs and vehicle maintenance) still require a fresh successful Godot validation and APK/emulator run. GitHub Actions has recently been failing before exposing runner logs, so the current development head must not be treated as a verified APK. No Android release is considered physically device-tested until it has been installed and exercised on a real phone.
 
 ## Performance principles
 - Target 30 FPS on baseline Android devices.
