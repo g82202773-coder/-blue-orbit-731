@@ -32,6 +32,16 @@ func _initialize() -> void:
     assert(state.buy_bike(), "Motorbike purchase should succeed.")
     assert(state.bike_owned and state.wallet == 2500, "Motorbike purchase should deduct ₹2,500.")
     state.wallet = 5000
+    var shop_purchase_state = GameStateScript.new()
+    shop_purchase_state.wallet = 5000
+    shop_purchase_state.bank_balance = 0
+    shop_purchase_state.loan_balance = 0
+    shop_purchase_state.shop_owned = false
+    var shop_purchase_net_worth: int = shop_purchase_state.net_worth()
+    assert(shop_purchase_state.buy_shop(), "A player should be able to purchase the corner shop.")
+    assert(shop_purchase_state.wallet == 1000 and shop_purchase_state.shop_stock_units == 25, "The shop should cost ₹4,000 and include 25 starter stock units.")
+    assert(shop_purchase_state.net_worth() == shop_purchase_net_worth, "Buying a shop should not create net worth by double-counting its starter inventory.")
+
     assert(state.buy_shop(), "Corner shop purchase should succeed.")
     assert(state.shop_owned and state.wallet == 1000, "Shop purchase should deduct ₹4,000.")
     assert(state.shop_stock_units == 25, "A new shop should open with starter inventory.")
