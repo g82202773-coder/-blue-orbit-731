@@ -787,7 +787,7 @@ func _set_move_y(value: float) -> void:
 func _build_panels() -> void:
     bank_panel = PanelContainer.new()
     bank_panel.position = Vector2(430.0, 150.0)
-    bank_panel.custom_minimum_size = Vector2(420.0, 360.0)
+    bank_panel.custom_minimum_size = Vector2(460.0, 480.0)
     bank_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.08, 0.12, 0.97)))
     hud_layer.add_child(bank_panel)
     var bank_box := VBoxContainer.new()
@@ -798,6 +798,8 @@ func _build_panels() -> void:
     bank_box.add_child(bank_info)
     _add_button(bank_box, "DEPOSIT ₹500", func(): GameState.deposit(500), 180.0)
     _add_button(bank_box, "WITHDRAW ₹500", func(): GameState.withdraw(500), 180.0)
+    _add_button(bank_box, "TAKE LOAN ₹2,000", _take_loan, 200.0)
+    _add_button(bank_box, "REPAY LOAN ₹500", _repay_loan, 200.0)
     _add_button(bank_box, "CLOSE", _hide_panels, 120.0)
     bank_panel.hide()
 
@@ -1215,6 +1217,14 @@ func _toggle_map() -> void:
     map_panel.visible = should_open
     _update_minimap()
 
+func _take_loan() -> void:
+    if GameState.take_loan(2000):
+        _refresh_ui()
+
+func _repay_loan() -> void:
+    if GameState.repay_loan(500):
+        _refresh_ui()
+
 func _toggle_bank() -> void:
     var should_open := not bank_panel.visible
     _hide_panels()
@@ -1303,9 +1313,9 @@ func _refresh_ui() -> void:
         var recent := ""
         for i in range(mini(GameState.transactions.size(), 5)):
             recent += "• %s\n" % GameState.transactions[i]
-        bank_info.text = "Wallet: ₹%d\nBank: ₹%d\nNet worth: ₹%d\n\nRECENT TRANSACTIONS\n%s" % [GameState.wallet, GameState.bank_balance, GameState.net_worth(), recent]
+        bank_info.text = "Wallet: ₹%d\nBank: ₹%d\nOutstanding loan: ₹%d\nDaily interest: 2%%\nNet worth: ₹%d\n\nRECENT TRANSACTIONS\n%s" % [GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.net_worth(), recent]
     if is_instance_valid(phone_info):
-        phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nFuel: %d%%  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs completed: %d\nBuy meals to restore hunger. Sleep at your home to restore energy." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, int(round(GameState.fuel_percent)), int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed]
+        phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nLoan: ₹%d\nFuel: %d%%  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs completed: %d\nBuy meals to restore hunger. Sleep at your home to restore energy." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, GameState.loan_balance, int(round(GameState.fuel_percent)), int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed]
     if is_instance_valid(job_info):
         if job_stage == 0:
             job_info.text = "Choose a job. Complete the pickup and reach the destination to earn your reward.\nCompleted jobs: %d" % GameState.missions_completed
@@ -1314,7 +1324,7 @@ func _refresh_ui() -> void:
     if is_instance_valid(bike_button):
         bike_button.text = "MOTORBIKE OWNED • ₹2,500 VALUE" if GameState.bike_owned else "BUY MOTORBIKE • ₹2,500"
     if is_instance_valid(empire_info):
-        empire_info.text = "Day %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nCorner shop: %s\nShop employees: %d / 3\nDaily shop income: ₹%d\nMotorbike: %s\nUncollected income: ₹%d\nLifetime earnings: ₹%d\nNet worth: ₹%d" % [
+        empire_info.text = "Day %d\nWallet: ₹%d  |  Bank: ₹%d\nHome: %s\nCorner shop: %s\nShop employees: %d / 3\nDaily shop income: ₹%d\nMotorbike: %s\nUncollected income: ₹%d\nLifetime earnings: ₹%d\nLoan outstanding: ₹%d\nNet worth: ₹%d" % [
             GameState.day_number,
             GameState.wallet,
             GameState.bank_balance,
@@ -1325,6 +1335,7 @@ func _refresh_ui() -> void:
             "Owned" if GameState.bike_owned else "Not owned",
             GameState.uncollected_shop_income,
             GameState.lifetime_earnings,
+            GameState.loan_balance,
             GameState.net_worth()
         ]
 
