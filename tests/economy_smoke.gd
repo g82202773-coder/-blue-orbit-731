@@ -66,7 +66,9 @@ func _initialize() -> void:
     assert(state.buy_meal(), "A meal should be purchasable when the player can afford it.")
     assert(state.wallet == 1100 and is_equal_approx(state.hunger_percent, 85.0), "A meal should deduct ₹100 and restore 45 hunger points.")
     state.energy_percent = 30.0
-    assert(state.sleep_at_home(), "An owner should be able to sleep at home.")
+    assert(not state.sleep_at_home(), "Sleeping should be unavailable outside the home.")
+    state.inside_home = true
+    assert(state.sleep_at_home(), "An owner inside the home should be able to sleep.")
     assert(state.day_number == previous_day + 2, "Sleeping should advance one day.")
     assert(is_equal_approx(state.game_minutes, 480.0), "Sleeping should set the clock to 8:00 AM.")
     assert(is_equal_approx(state.energy_percent, 100.0), "Sleeping should fully restore energy.")
