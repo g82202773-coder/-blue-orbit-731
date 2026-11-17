@@ -284,6 +284,9 @@ func sleep_at_home() -> bool:
     if not home_owned:
         toast_requested.emit("Buy a home before using the sleep action.")
         return false
+    if not inside_home:
+        toast_requested.emit("Enter your home before sleeping.")
+        return false
     day_number += 1
     game_minutes = 8.0 * 60.0
     energy_percent = 100.0
@@ -314,7 +317,7 @@ func set_vehicle_state(kind: String, position: Vector3, rotation_y: float, is_dr
 
 func save_game() -> void:
     var data := {
-        "version": 5,
+        "version": 6,
         "wallet": wallet,
         "bank_balance": bank_balance,
         "loan_balance": loan_balance,
