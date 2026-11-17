@@ -122,7 +122,7 @@ jobs:
           ram-size: 2048M
           heap-size: 512M
           emulator-boot-timeout: 600
-          emulator-options: -no-snapshot-load -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          emulator-options: -no-snapshot-load -no-snapshot-save -no-window -gpu host -noaudio -no-boot-anim -camera-back none -camera-front none
           disable-animations: true
           script: |
             bash .github/scripts/android-emulator-smoke.sh
