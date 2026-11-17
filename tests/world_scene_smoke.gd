@@ -23,7 +23,7 @@ func _run_world_smoke() -> void:
         if wall == null:
             _fail("Missing interior wall: %s" % wall_name)
             return
-        if not wall is StaticBody3D:
+        if not (wall is StaticBody3D):
             _fail("%s must be a StaticBody3D." % wall_name)
             return
         if not _has_collision_shape(wall):
@@ -40,7 +40,7 @@ func _run_world_smoke() -> void:
         return
 
     var apartment_floor := _find_named_node(scene, "ApartmentFloorCollision")
-    if apartment_floor == null or not apartment_floor is StaticBody3D:
+    if apartment_floor == null or not (apartment_floor is StaticBody3D):
         _fail("Apartment interior floor collision is missing.")
         return
 
