@@ -55,6 +55,7 @@ var wallet_label: Label
 var location_label: Label
 var fuel_label: Label
 var time_label: Label
+var needs_label: Label
 var clock_display_time := 0.0
 var perf_label: Label
 var toast_label: Label
@@ -659,6 +660,10 @@ func _build_hud() -> void:
     time_label.add_theme_font_size_override("font_size", 15)
     time_label.modulate = Color("#f0dca8")
     status_box.add_child(time_label)
+    needs_label = Label.new()
+    needs_label.add_theme_font_size_override("font_size", 14)
+    needs_label.modulate = Color("#d8e1d4")
+    status_box.add_child(needs_label)
     fuel_label = Label.new()
     fuel_label.add_theme_font_size_override("font_size", 14)
     fuel_label.modulate = Color("#e4d8a7")
@@ -809,6 +814,7 @@ func _build_panels() -> void:
     phone_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     phone_box.add_child(phone_info)
     _add_button(phone_box, "OPEN BANK", _toggle_bank, 180.0)
+    _add_button(phone_box, "BUY MEAL • ₹100", _buy_meal, 180.0)
     _add_button(phone_box, "REFUEL VEHICLE • ₹300", _refuel_vehicle, 180.0)
     _add_button(phone_box, "RESET CAMERA", _reset_camera, 180.0)
     _add_button(phone_box, "JOB BOARD", _job_action, 180.0)
@@ -866,7 +872,7 @@ func _build_panels() -> void:
     _add_button(empire_box, "BUY CORNER SHOP • ₹4,000", _buy_shop, 280.0)
     _add_button(empire_box, "HIRE SHOP EMPLOYEE • ₹500", _hire_shop_employee, 280.0)
     _add_button(empire_box, "COLLECT SHOP INCOME", _collect_shop, 280.0)
-    _add_button(empire_box, "SLEEP / NEXT DAY", _next_day, 280.0)
+    _add_button(empire_box, "SLEEP AT HOME", _next_day, 280.0)
     _add_button(empire_box, "CLOSE", _hide_panels, 120.0)
     empire_panel.hide()
 
@@ -973,6 +979,10 @@ func _move_player(delta: float) -> void:
     var speed := RUN_SPEED if (run_touch or Input.is_action_pressed("run")) else WALK_SPEED
     if direction.length_squared() > 0.001:
         direction = direction.normalized()
+        var energy_factor := 0.72 if GameState.energy_percent < 18.0 else 1.0
+        var hunger_factor := 0.82 if GameState.hunger_percent < 12.0 else 1.0
+        speed *= energy_factor * hunger_factor
+        GameState.consume_energy(delta * (0.022 if (run_touch or Input.is_action_pressed("run")) else 0.009))
         player.rotation.y = lerp_angle(player.rotation.y, atan2(-direction.x, -direction.z), delta * 9.0)
         player.velocity.x = direction.x * speed
         player.velocity.z = direction.z * speed
@@ -1049,6 +1059,7 @@ func _drive_car(delta: float) -> void:
     GameState.set_vehicle_state(active_vehicle_kind, active_vehicle.global_position, active_vehicle.rotation.y, true)
     if absf(car_speed) > 0.5:
         GameState.consume_fuel(delta * (0.08 + absf(car_speed) * 0.004))
+        GameState.consume_energy(delta * 0.0025)
         _update_fuel_hud()
 
 func _update_camera(delta: float) -> void:
@@ -1253,8 +1264,13 @@ func _hire_shop_employee() -> void:
 func _collect_shop() -> void:
     GameState.collect_shop_income()
 
+func _buy_meal() -> void:
+    if GameState.buy_meal():
+        _refresh_ui()
+
 func _next_day() -> void:
-    GameState.advance_day()
+    if GameState.sleep_at_home():
+        _refresh_ui()
 
 func _sync_save_state() -> void:
     if is_instance_valid(player):
@@ -1275,6 +1291,9 @@ func _refresh_ui() -> void:
     wallet_label.text = "WALLET  ₹%d     BANK  ₹%d" % [GameState.wallet, GameState.bank_balance]
     if is_instance_valid(time_label):
         time_label.text = "DAY %d  •  %s" % [GameState.day_number, GameState.clock_text()]
+    if is_instance_valid(needs_label):
+        needs_label.text = "HUNGER %d%%  •  ENERGY %d%%" % [int(round(GameState.hunger_percent)), int(round(GameState.energy_percent))]
+        needs_label.modulate = Color("#e28b78") if GameState.hunger_percent < 20.0 or GameState.energy_percent < 20.0 else Color("#d8e1d4")
     _update_fuel_hud()
     if is_instance_valid(map_panel) and map_panel.visible:
         _update_minimap()
@@ -1286,7 +1305,7 @@ func _refresh_ui() -> void:
             recent += "• %s\n" % GameState.transactions[i]
         bank_info.text = "Wallet: ₹%d\nBank: ₹%d\nNet worth: ₹%d\n\nRECENT TRANSACTIONS\n%s" % [GameState.wallet, GameState.bank_balance, GameState.net_worth(), recent]
     if is_instance_valid(phone_info):
-        phone_info.text = "Day %d\nWallet ₹%d  •  Bank ₹%d\nFuel: %d%%\nCompleted jobs: %d\nYour phone connects your jobs, bank and empire." % [GameState.day_number, GameState.wallet, GameState.bank_balance, int(round(GameState.fuel_percent)), GameState.missions_completed]
+        phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nFuel: %d%%  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs completed: %d\nBuy meals to restore hunger. Sleep at your home to restore energy." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, int(round(GameState.fuel_percent)), int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed]
     if is_instance_valid(job_info):
         if job_stage == 0:
             job_info.text = "Choose a job. Complete the pickup and reach the destination to earn your reward.\nCompleted jobs: %d" % GameState.missions_completed
