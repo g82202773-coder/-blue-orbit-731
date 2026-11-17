@@ -42,21 +42,18 @@ echo "LIFE EMPIRE process PID: $PID"
 # capture the unobstructed game frame.
 adb shell screencap -p /sdcard/life-empire-initial.png
 adb pull /sdcard/life-empire-initial.png build/life-empire-initial.png
-DISPLAY_SIZE="$(adb shell wm size | awk '/Physical size|Override size/ {print $3}' | tail -1 | tr -d '\r')"
-SCREEN_W="${DISPLAY_SIZE%x*}"
-SCREEN_H="${DISPLAY_SIZE#*x}"
+# Use the actual captured landscape screenshot dimensions. The immersive-mode
+# confirmation's "Got it" button is at roughly 73% width and 39% height.
+read -r SCREEN_W SCREEN_H < <(python - <<'PY'
+from PIL import Image
+image = Image.open("build/life-empire-initial.png")
+print(image.width, image.height)
+PY
+)
 if [[ "$SCREEN_W" =~ ^[0-9]+$ && "$SCREEN_H" =~ ^[0-9]+$ ]]; then
-  # wm size may report portrait physical dimensions while the full-screen game
-  # rotates the captured display to landscape.
-  if (( SCREEN_W < SCREEN_H )); then
-    TEMP="$SCREEN_W"
-    SCREEN_W="$SCREEN_H"
-    SCREEN_H="$TEMP"
-  fi
-  # "Got it" sits near the middle-right of Android's immersive-mode dialog.
-  adb shell input tap "$((SCREEN_W * 56 / 100))" "$((SCREEN_H * 38 / 100))"
+  adb shell input tap "$((SCREEN_W * 73 / 100))" "$((SCREEN_H * 39 / 100))"
 fi
-sleep 4
+sleep 5
 
 adb shell dumpsys activity activities > build/emulator-activities.txt 2>&1 || true
 adb shell dumpsys meminfo "$PACKAGE" > build/emulator-memory.txt 2>&1 || true
@@ -75,15 +72,26 @@ if grep -E "FATAL EXCEPTION|Fatal signal|SCRIPT ERROR:|Parse Error:|Failed to lo
 fi
 
 python - <<'PY'
-from PIL import Image
+from PIL import Image, ImageChops
+initial = Image.open("build/life-empire-initial.png").convert("RGB")
 image = Image.open("build/life-empire-screen.png").convert("RGB")
 if image.width <= image.height:
     raise SystemExit(f"Expected landscape screenshot, got {image.width}x{image.height}")
+if initial.size != image.size:
+    raise SystemExit(f"Screenshot dimensions changed unexpectedly: {initial.size} -> {image.size}")
 sample = image.resize((96, 54))
 colors = len(set(sample.getdata()))
-print(f"Emulator screenshot: {image.width}x{image.height}; sampled colors: {colors}")
+before = initial.resize((96, 54))
+diff = ImageChops.difference(before, sample)
+changed = sum(1 for pixel in diff.getdata() if max(pixel) > 18)
+changed_ratio = changed / (96 * 54)
+print(f"Emulator screenshot: {image.width}x{image.height}; sampled colors: {colors}; changed area after dismiss: {changed_ratio:.1%}")
 if colors < 40:
     raise SystemExit("Screenshot looks nearly blank; refusing to pass visual startup smoke test.")
+# A fresh emulator displays Android's immersive-mode prompt on first launch.
+# After tapping Got it, a large part of the frame must change to the actual game.
+if changed_ratio < 0.10:
+    raise SystemExit("The launch overlay may still cover the game; dismiss tap was not verified.")
 PY
 
 echo "Android emulator install, launch, process, screenshot and crash-log checks passed."
