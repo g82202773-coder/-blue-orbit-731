@@ -153,5 +153,40 @@ func _initialize() -> void:
     assert(is_equal_approx(restored.fuel_percent, 87.5), "Fuel level should persist.")
     assert(is_equal_approx(restored.car_condition_percent, 100.0), "Repaired car condition should persist.")
     assert(is_equal_approx(restored.bike_condition_percent, 90.0), "Motorbike wear should persist independently.")
-    print("LIFE EMPIRE economy, mission, vehicle and fuel tests passed.")
+
+    # Rental apartment portfolio, daily rent ledger, in-property collection and sleep.
+    var apartment_state = GameStateScript.new()
+    apartment_state.wallet = 10000
+    apartment_state.bank_balance = 0
+    apartment_state.loan_balance = 0
+    apartment_state.day_number = 1
+    apartment_state.apartment_owned = false
+    apartment_state.inside_apartment = false
+    apartment_state.uncollected_apartment_rent = 0
+    apartment_state.transactions.clear()
+    var apartment_starting_net_worth: int = apartment_state.net_worth()
+    assert(apartment_state.buy_apartment(), "The rental apartment should be purchasable.")
+    assert(apartment_state.wallet == 2000 and apartment_state.apartment_owned, "The apartment should cost ₹8,000.")
+    assert(apartment_state.net_worth() == apartment_starting_net_worth, "Buying the apartment should transfer cash into an asset without creating net worth.")
+    apartment_state.advance_day()
+    assert(apartment_state.day_number == 2 and apartment_state.uncollected_apartment_rent == 200, "The owned apartment should accrue ₹200 rent each new day.")
+    assert(not apartment_state.collect_apartment_rent(), "Apartment rent should not be collectible from outside.")
+    apartment_state.inside_apartment = true
+    apartment_state.apartment_return_position = Vector3(100.0, 1.0, -98.0)
+    var apartment_value_with_rent: int = apartment_state.net_worth()
+    assert(apartment_state.collect_apartment_rent(), "Apartment rent should be collectible from inside the apartment.")
+    assert(apartment_state.wallet == 2200 and apartment_state.uncollected_apartment_rent == 0, "Collected rent should transfer into the wallet exactly once.")
+    assert(apartment_state.net_worth() == apartment_value_with_rent, "Collecting rent should not change total net worth.")
+    apartment_state.energy_percent = 20.0
+    apartment_state.hunger_percent = 80.0
+    assert(apartment_state.sleep_at_home(), "An apartment owner should be able to sleep inside the apartment.")
+    assert(apartment_state.day_number == 3 and apartment_state.energy_percent == 100.0, "Apartment sleep should advance the day and restore energy.")
+    assert(apartment_state.uncollected_apartment_rent == 200, "A new day should accrue the next ₹200 rent payment.")
+    apartment_state.save_game()
+    var apartment_restored = GameStateScript.new()
+    apartment_restored.load_game()
+    assert(apartment_restored.apartment_owned and apartment_restored.inside_apartment, "Apartment ownership and interior state should persist.")
+    assert(apartment_restored.apartment_return_position.is_equal_approx(Vector3(100.0, 1.0, -98.0)), "Apartment return position should persist.")
+    assert(apartment_restored.uncollected_apartment_rent == 200, "Uncollected apartment rent should persist.")
+    print("LIFE EMPIRE economy, property, mission, vehicle and fuel tests passed.")
     quit(0)
