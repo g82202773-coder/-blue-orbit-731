@@ -68,6 +68,12 @@ func _initialize() -> void:
     assert(state.wallet == 1200 and is_equal_approx(state.fuel_percent, 100.0), "Refuelling should deduct ₹300 and restore full fuel.")
     state.consume_fuel(12.5)
     assert(is_equal_approx(state.fuel_percent, 87.5), "Driving should consume fuel without going negative.")
+    state.consume_vehicle_condition("car", 5.0)
+    assert(is_equal_approx(state.vehicle_condition("car"), 95.0), "Driving should gradually reduce car condition.")
+    assert(state.repair_vehicle("car"), "A damaged vehicle should be serviceable when the player can afford the cost.")
+    assert(state.wallet == 1100 and is_equal_approx(state.vehicle_condition("car"), 100.0), "Servicing a car at 95% condition should cost ₹100 and restore it.")
+    state.consume_vehicle_condition("motorbike", 10.0)
+    assert(is_equal_approx(state.vehicle_condition("motorbike"), 90.0), "Motorbike condition should be tracked separately.")
 
     state.game_minutes = 1439.0
     var previous_day: int = state.day_number
@@ -81,7 +87,7 @@ func _initialize() -> void:
     assert(state.hunger_percent < 100.0 and state.energy_percent < 100.0, "Needs should gradually decrease as simulation time passes.")
     state.hunger_percent = 40.0
     assert(state.buy_meal(), "A meal should be purchasable when the player can afford it.")
-    assert(state.wallet == 1100 and is_equal_approx(state.hunger_percent, 85.0), "A meal should deduct ₹100 and restore 45 hunger points.")
+    assert(state.wallet == 1000 and is_equal_approx(state.hunger_percent, 85.0), "A meal should deduct ₹100 and restore 45 hunger points.")
     state.energy_percent = 30.0
     assert(not state.sleep_at_home(), "Sleeping should be unavailable outside the home.")
     state.inside_home = true
@@ -97,7 +103,7 @@ func _initialize() -> void:
     state.shop_return_position = Vector3(-20.0, 1.0, -68.0)
     var net_worth_before_restock: int = state.net_worth()
     assert(state.restock_shop(), "A shop owner inside the store should be able to purchase more stock.")
-    assert(state.wallet == 800 and state.shop_stock_units == 24, "Restocking should cost ₹300 and add 20 units.")
+    assert(state.wallet == 700 and state.shop_stock_units == 24, "Restocking should cost ₹300 and add 20 units.")
     assert(state.net_worth() == net_worth_before_restock, "Restocking should transfer value from cash to inventory without changing net worth.")
     assert(state.uncollected_shop_income == 700, "Daily business income should accrue on each full day.")
     assert(state.loan_balance == 1593, "Loan interest should accrue when sleeping advances a day.")
@@ -145,5 +151,7 @@ func _initialize() -> void:
     assert(is_equal_approx(restored.bike_rotation_y, 1.2), "Motorbike rotation should persist.")
     assert(restored.player_position.is_equal_approx(Vector3(150.0, 1.0, 150.0)), "Interior player position should persist.")
     assert(is_equal_approx(restored.fuel_percent, 87.5), "Fuel level should persist.")
+    assert(is_equal_approx(restored.car_condition_percent, 100.0), "Repaired car condition should persist.")
+    assert(is_equal_approx(restored.bike_condition_percent, 90.0), "Motorbike wear should persist independently.")
     print("LIFE EMPIRE economy, mission, vehicle and fuel tests passed.")
     quit(0)
