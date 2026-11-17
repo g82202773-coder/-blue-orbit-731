@@ -1061,19 +1061,24 @@ func _build_panels() -> void:
     map_panel.hide()
 
     job_panel = PanelContainer.new()
-    job_panel.custom_minimum_size = Vector2(440.0, 390.0)
+    job_panel.custom_minimum_size = Vector2(460.0, 470.0)
     job_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.08, 0.12, 0.98)))
     hud_layer.add_child(job_panel)
+    var job_scroll := ScrollContainer.new()
+    job_scroll.custom_minimum_size = Vector2(440.0, 450.0)
+    job_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    job_panel.add_child(job_scroll)
     var job_box := VBoxContainer.new()
     job_box.add_theme_constant_override("separation", 8)
-    job_panel.add_child(job_box)
+    job_scroll.add_child(job_box)
     _add_title(job_box, "NAVAPURA JOB BOARD")
     job_info = Label.new()
     job_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     job_box.add_child(job_info)
     _add_button(job_box, "FOOD DELIVERY • ₹650", _start_food_job, 280.0)
     _add_button(job_box, "TAXI PICKUP • ₹500", _start_taxi_job, 280.0)
-    _add_button(job_box, "COURIER PARCEL • ₹900", _start_courier_job, 280.0)
+    _add_button(job_box, "COURIER PARCEL • ₹900 • LEVEL 2", _start_courier_job, 280.0)
+    _add_button(job_box, "HEAVY CARGO • ₹1,600 • LEVEL 3", _start_heavy_cargo_job, 280.0)
     _add_button(job_box, "CANCEL CURRENT JOB", _cancel_job, 280.0)
     _add_button(job_box, "CLOSE", _hide_panels, 120.0)
     job_panel.hide()
@@ -1373,6 +1378,9 @@ func _start_taxi_job() -> void:
 func _start_courier_job() -> void:
     _start_job("Courier parcel", 900, Vector3(0.0, 0.85, -40.0), Vector3(80.0, 0.85, 0.0))
 
+func _start_heavy_cargo_job() -> void:
+    _start_job("Heavy cargo", 1600, Vector3(80.0, 0.85, -40.0), Vector3(-80.0, 0.85, 40.0))
+
 func _start_job(title: String, reward: int, pickup_position: Vector3, destination_position: Vector3) -> void:
     if not GameState.can_accept_job(title):
         var required_level: int = GameState.required_level_for_job(title)
@@ -1600,7 +1608,7 @@ func _refresh_ui() -> void:
         phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nLoan: ₹%d\nPlayer Level: %d  •  XP: %d / %d\nFuel: %d%%  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs completed: %d\nComplete jobs to gain XP and unlock higher-paying work." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), int(round(GameState.fuel_percent)), int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed]
     if is_instance_valid(job_info):
         if job_stage == 0:
-            job_info.text = "Choose a job. Complete pickup and delivery to earn your reward.\nCompleted jobs: %d  •  Player Level: %d\nXP: %d / %d\nCourier work unlocks at Level 2." % [GameState.missions_completed, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level()]
+            job_info.text = "Choose a job. Complete pickup and delivery to earn your reward.\nCompleted jobs: %d  •  Player Level: %d\nXP: %d / %d\nCourier unlocks at Level 2; heavy cargo unlocks at Level 3." % [GameState.missions_completed, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level()]
         else:
             job_info.text = "ACTIVE: %s\nReward: ₹%d\nStep: %s" % [job_title, job_reward_active, "Go to pickup" if job_stage == 1 else "Deliver to destination"]
     if is_instance_valid(bike_button):
