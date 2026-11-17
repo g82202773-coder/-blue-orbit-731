@@ -29,6 +29,7 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Three lightweight moving traffic cars and four looping pedestrians.
 - Job board with food delivery (₹650), taxi pickup (₹500), courier parcel (₹900) and heavy cargo (₹1,600) missions, each with separate pickup/drop-off routes.
 - Job progression with XP rewards, persistent player levels, Level 2 courier unlock and Level 3 heavy-cargo unlock.
+- Timed deliveries with mission-specific deadlines, failure on timeout, saved countdowns and up to 15% proportional on-time payout bonuses.
 - Persistent completed-job counter and mission reward history.
 - Fictional wallet and bank with ₹500 deposit/withdraw actions, loans up to ₹5,000, ₹500 repayments, 2% daily compounding interest, debt-aware net worth, and recent transaction records.
 - Purchasable starter home physically placed in Navapura with a furnished bedroom/living/kitchen interior, front-door entry/exit, home signage, and a sleep action that works only while inside.
