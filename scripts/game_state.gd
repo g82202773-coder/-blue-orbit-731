@@ -314,7 +314,7 @@ func set_vehicle_state(kind: String, position: Vector3, rotation_y: float, is_dr
 
 func save_game() -> void:
     var data := {
-        "version": 4,
+        "version": 5,
         "wallet": wallet,
         "bank_balance": bank_balance,
         "loan_balance": loan_balance,
