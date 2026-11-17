@@ -29,10 +29,11 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Job board with food delivery (₹650), taxi pickup (₹500) and courier parcel (₹900) missions, each with separate pickup/drop-off routes.
 - Persistent completed-job counter and mission reward history.
 - Fictional wallet and bank with ₹500 deposit/withdraw actions, loans up to ₹5,000, ₹500 repayments, 2% daily compounding interest, debt-aware net worth, and recent transaction records.
-- Starter home and corner-shop purchases, daily shop income, and collect-income action.
+- Purchasable starter home physically placed in Navapura with a furnished bedroom/living/kitchen interior, front-door entry/exit, home signage, and a sleep action that works only while inside.
+- Corner-shop purchase, employee hiring, daily shop income, and collect-income action.
 - Persistent in-game clock (one game minute per real second), day rollover, daily shop income accrual, and a continuous day/night sky and lighting cycle.
-- Survival needs: hunger and energy gradually decline; walking/running drains extra energy, meals restore hunger, and sleeping at an owned home restores energy and advances the day.
-- Active mission progress, pickup/drop-off positions, vehicle state, simulation time, and economy persist through offline JSON save/load, 20-second autosave, and Android application-pause saving.
+- Survival needs: hunger and energy gradually decline; walking/running drains extra energy, meals restore hunger, and sleeping inside the owned home restores energy and advances the day.
+- Active mission progress, pickup/drop-off positions, home interior/return position, vehicle state, simulation time, needs, loans and economy persist through offline JSON save/load, 20-second autosave, and Android application-pause saving.
 
 ## Development status
 This repository is the clean source-of-truth for the new LIFE EMPIRE project. Features are added incrementally and must be distinguished as implemented, CI-tested, or device-tested. Godot 4.7 GitHub Actions import/parse, economy/persistence regression tests, and a 120-frame headless scene smoke test are used for validation. Android emulator screenshot QA is also configured. No Android release is considered physically device-tested until it has been installed and exercised on a real phone.
