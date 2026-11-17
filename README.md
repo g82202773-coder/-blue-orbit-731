@@ -30,6 +30,7 @@ A landscape, offline-first 3D open-world life and business simulator set in the 
 - Rental apartment priced at ₹8,000 with a furnished interior, ₹200 daily rent, inside-apartment rent collection and sleep support; apartment value and uncollected rent appear in net worth.
 - Job board with food delivery (₹650), taxi pickup (₹500), courier parcel (₹900) and heavy cargo (₹1,600) missions, each with separate pickup/drop-off routes.
 - Job progression with XP rewards, persistent player levels, Level 2 courier unlock and Level 3 heavy-cargo unlock.
+- Three shop stages—Corner Shop, Mini Mart and Supermarket—with visible interior expansion fixtures, 17 collision-backed interior walls and an apartment floor collision.
 - Timed deliveries with mission-specific deadlines, failure on timeout, saved countdowns and up to 15% proportional on-time payout bonuses; the completion screen reports the final payout.
 - Persistent completed-job counter and mission reward history.
 - Fictional wallet and bank with ₹500 deposit/withdraw actions, loans up to ₹5,000, ₹500 repayments, 0.5% daily savings yield, 2% daily compounding loan interest, debt-aware net worth, and recent transaction records.
