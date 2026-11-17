@@ -15,8 +15,13 @@ const CITY_LIMIT := 110.0
 const ROAD_WIDTH := 12.0
 const ROAD_CENTERS := [-80.0, -40.0, 0.0, 40.0, 80.0]
 
+func _ready() -> void:
+    # The map is closed during normal play; avoid scheduling redraws until opened.
+    set_process(false)
+
 func _process(_delta: float) -> void:
-    queue_redraw()
+    if is_visible_in_tree():
+        queue_redraw()
 
 func _world_to_map(point: Vector3) -> Vector2:
     var usable := size - Vector2(24.0, 38.0)
