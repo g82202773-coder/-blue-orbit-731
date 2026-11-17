@@ -13,6 +13,8 @@ const HOME_DOOR_POSITION := Vector3(100.0, 1.0, 98.0)
 const HOME_INTERIOR_POSITION := Vector3(150.0, 1.0, 150.0)
 const SHOP_DOOR_POSITION := Vector3(-20.0, 1.0, -68.0)
 const SHOP_INTERIOR_POSITION := Vector3(180.0, 1.0, 150.0)
+const APARTMENT_DOOR_POSITION := Vector3(100.0, 1.0, -98.0)
+const APARTMENT_INTERIOR_POSITION := Vector3(150.0, 1.0, -150.0)
 
 var mats: Dictionary = {}
 var game_environment: Environment
@@ -22,6 +24,8 @@ var home_interior: Node3D
 var home_sign: Label3D
 var shop_interior: Node3D
 var shop_sign: Label3D
+var apartment_interior: Node3D
+var apartment_sign: Label3D
 var window_transforms: Array[Transform3D] = []
 var trim_transforms: Array[Transform3D] = []
 var lane_transforms: Array[Transform3D] = []
@@ -97,6 +101,7 @@ func _ready() -> void:
     _build_city()
     _build_home_property()
     _build_shop_interior()
+    _build_apartment_property()
     _build_player()
     _build_car()
     if GameState.bike_owned:
@@ -121,23 +126,38 @@ func _ready() -> void:
         player.global_position.y = 1.0
     if GameState.inside_home and GameState.home_owned:
         GameState.inside_shop = false
+        GameState.inside_apartment = false
         home_interior.show()
         shop_interior.hide()
+        apartment_interior.hide()
         GameState.was_driving = false
         player.global_position = GameState.player_position
         camera_distance = 5.5
     elif GameState.inside_shop and GameState.shop_owned:
         GameState.inside_home = false
+        GameState.inside_apartment = false
         home_interior.hide()
         shop_interior.show()
+        apartment_interior.hide()
+        GameState.was_driving = false
+        player.global_position = GameState.player_position
+        camera_distance = 5.5
+    elif GameState.inside_apartment and GameState.apartment_owned:
+        GameState.inside_home = false
+        GameState.inside_shop = false
+        home_interior.hide()
+        shop_interior.hide()
+        apartment_interior.show()
         GameState.was_driving = false
         player.global_position = GameState.player_position
         camera_distance = 5.5
     else:
         GameState.inside_home = false
         GameState.inside_shop = false
+        GameState.inside_apartment = false
         home_interior.hide()
         shop_interior.hide()
+        apartment_interior.hide()
     if GameState.was_driving:
         active_vehicle_kind = GameState.active_vehicle_kind
         if active_vehicle_kind == "motorbike" and is_instance_valid(bike):
@@ -526,6 +546,118 @@ func _shop_action() -> void:
         _exit_shop()
     else:
         _enter_shop()
+
+func _build_apartment_property() -> void:
+    var exterior := Node3D.new()
+    exterior.name = "RentalApartmentExterior"
+    exterior.position = Vector3(100.0, 0.0, -104.0)
+    add_child(exterior)
+    _static_box(exterior, Vector3(0.45, 7.6, 12.0), Vector3(-7.0, 3.8, 0.0), mats["cream"], "ApartmentWestWall")
+    _static_box(exterior, Vector3(0.45, 7.6, 12.0), Vector3(7.0, 3.8, 0.0), mats["cream"], "ApartmentEastWall")
+    _static_box(exterior, Vector3(14.0, 7.6, 0.45), Vector3(0.0, 3.8, 6.0), mats["cream"], "ApartmentRearWall")
+    _static_box(exterior, Vector3(5.8, 7.6, 0.45), Vector3(-4.1, 3.8, -6.0), mats["cream"], "ApartmentFrontLeft")
+    _static_box(exterior, Vector3(5.8, 7.6, 0.45), Vector3(4.1, 3.8, -6.0), mats["cream"], "ApartmentFrontRight")
+    _box_mesh(exterior, Vector3(15.0, 0.5, 13.0), Vector3(0.0, 7.85, 0.0), mats["dark"], "ApartmentRoof")
+    _box_mesh(exterior, Vector3(1.6, 2.8, 0.14), Vector3(0.0, 1.45, -6.22), mats["dark"], "ApartmentEntranceDoor")
+    for floor_y in [2.5, 5.8]:
+        for window_x in [-4.4, 4.4]:
+            _box_mesh(exterior, Vector3(1.7, 1.4, 0.12), Vector3(window_x, floor_y, -6.24), mats["glass"], "ApartmentWindow")
+            _box_mesh(exterior, Vector3(1.9, 0.14, 0.18), Vector3(window_x, floor_y - 0.78, -6.3), mats["white"], "ApartmentSill")
+        _box_mesh(exterior, Vector3(3.2, 0.16, 1.0), Vector3(0.0, floor_y - 0.65, -6.7), mats["brick"], "ApartmentBalcony")
+        _box_mesh(exterior, Vector3(3.2, 0.95, 0.12), Vector3(0.0, floor_y - 0.15, -7.16), mats["white"], "ApartmentBalconyRail")
+    apartment_sign = Label3D.new()
+    apartment_sign.name = "RentalApartmentSign"
+    apartment_sign.text = "RENTAL APARTMENT • ₹8,000"
+    apartment_sign.font_size = 32
+    apartment_sign.outline_size = 6
+    apartment_sign.modulate = Color("#fff2d5")
+    apartment_sign.position = Vector3(0.0, 7.1, -6.28)
+    apartment_sign.pixel_size = 0.008
+    exterior.add_child(apartment_sign)
+
+    apartment_interior = Node3D.new()
+    apartment_interior.name = "RentalApartmentInterior"
+    apartment_interior.position = Vector3(150.0, 0.0, -150.0)
+    add_child(apartment_interior)
+    _static_box(apartment_interior, Vector3(14.0, 0.18, 14.0), Vector3(0.0, -0.1, 0.0), mats["concrete"], "ApartmentFloorCollision")
+    _box_mesh(apartment_interior, Vector3(5.8, 3.8, 0.25), Vector3(-4.1, 1.8, -7.0), mats["cream"], "ApartmentNorthLeft")
+    _box_mesh(apartment_interior, Vector3(5.8, 3.8, 0.25), Vector3(4.1, 1.8, -7.0), mats["cream"], "ApartmentNorthRight")
+    _box_mesh(apartment_interior, Vector3(5.8, 3.8, 0.25), Vector3(-4.1, 1.8, 7.0), mats["cream"], "ApartmentSouthLeft")
+    _box_mesh(apartment_interior, Vector3(5.8, 3.8, 0.25), Vector3(4.1, 1.8, 7.0), mats["cream"], "ApartmentSouthRight")
+    _box_mesh(apartment_interior, Vector3(0.25, 3.8, 14.0), Vector3(-7.0, 1.8, 0.0), mats["cream"], "ApartmentWestInnerWall")
+    _box_mesh(apartment_interior, Vector3(0.25, 3.8, 14.0), Vector3(7.0, 1.8, 0.0), mats["cream"], "ApartmentEastInnerWall")
+    _box_mesh(apartment_interior, Vector3(1.4, 2.9, 0.12), Vector3(0.0, 1.45, -6.84), mats["dark"], "ApartmentInteriorDoor")
+    _box_mesh(apartment_interior, Vector3(3.2, 0.28, 4.0), Vector3(-3.7, 0.48, -3.7), mats["blue"], "ApartmentBedFrame")
+    _box_mesh(apartment_interior, Vector3(3.0, 0.34, 3.8), Vector3(-3.7, 0.77, -3.7), mats["white"], "ApartmentMattress")
+    _box_mesh(apartment_interior, Vector3(1.0, 0.25, 1.0), Vector3(-4.25, 1.02, -5.0), mats["cream"], "ApartmentPillow")
+    _box_mesh(apartment_interior, Vector3(2.8, 0.8, 0.95), Vector3(3.8, 0.55, -4.8), mats["brick"], "ApartmentSofa")
+    _box_mesh(apartment_interior, Vector3(2.3, 0.38, 1.3), Vector3(0.8, 0.32, 0.3), mats["dark"], "ApartmentCoffeeTable")
+    _box_mesh(apartment_interior, Vector3(3.8, 0.95, 0.85), Vector3(4.65, 0.8, 4.5), mats["cream"], "ApartmentKitchenCounter")
+    _box_mesh(apartment_interior, Vector3(1.1, 0.08, 0.6), Vector3(4.65, 1.34, 4.5), mats["dark"], "ApartmentCooktop")
+    _box_mesh(apartment_interior, Vector3(0.12, 1.3, 3.0), Vector3(6.82, 2.25, 0.0), mats["glass"], "ApartmentWindow")
+    apartment_interior.hide()
+
+func _enter_apartment() -> void:
+    if driving:
+        _show_toast("Exit your vehicle before entering the apartment.")
+        return
+    if not GameState.apartment_owned:
+        _show_toast("Purchase the rental apartment from the Empire menu first.")
+        return
+    if player.global_position.distance_to(APARTMENT_DOOR_POSITION) > 6.0:
+        _show_toast("Go to the apartment entrance to enter.")
+        return
+    GameState.apartment_return_position = player.global_position
+    GameState.inside_apartment = true
+    GameState.inside_home = false
+    GameState.inside_shop = false
+    GameState.was_driving = false
+    driving = false
+    active_vehicle = null
+    car_speed = 0.0
+    apartment_interior.show()
+    home_interior.hide()
+    shop_interior.hide()
+    player.global_position = APARTMENT_INTERIOR_POSITION
+    player.rotation.y = 0.0
+    player.velocity = Vector3.ZERO
+    camera_yaw = 0.0
+    camera_distance = 5.5
+    GameState.set_player_position(player.global_position)
+    GameState.save_game()
+    _refresh_ui()
+    _show_toast("Welcome to your rental apartment. Rent accrues every day.")
+
+func _exit_apartment() -> void:
+    if not GameState.inside_apartment:
+        return
+    apartment_interior.hide()
+    GameState.inside_apartment = false
+    player.global_position = GameState.apartment_return_position
+    player.velocity = Vector3.ZERO
+    camera_yaw = 0.0
+    camera_distance = 8.5
+    GameState.set_player_position(player.global_position)
+    GameState.save_game()
+    _refresh_ui()
+    _show_toast("You left your apartment.")
+
+func _apartment_action() -> void:
+    if GameState.inside_apartment:
+        _exit_apartment()
+    else:
+        _enter_apartment()
+
+func _buy_apartment() -> void:
+    if player.global_position.distance_to(APARTMENT_DOOR_POSITION) > 7.0:
+        _show_toast("Visit the rental apartment before purchasing it.")
+        return
+    if GameState.buy_apartment():
+        _refresh_ui()
+
+func _collect_apartment_rent() -> void:
+    if GameState.collect_apartment_rent():
+        _refresh_ui()
 
 func _build_building(center: Vector3, size: Vector3, facade: Material, index: int) -> void:
     var body := StaticBody3D.new()
@@ -1003,6 +1135,7 @@ func _build_touch_controls() -> void:
     _add_hold_button(action_box, "BRAKE", func(): throttle_touch = -1.0, func(): throttle_touch = 0.0, 112.0)
     _add_button(action_box, "INTERACT", _interact, 112.0)
     _add_button(action_box, "HOME / EXIT", _home_action, 112.0)
+    _add_button(action_box, "APARTMENT / EXIT", _apartment_action, 112.0)
     _add_button(action_box, "SHOP / EXIT", _shop_action, 112.0)
     _add_button(action_box, "EXIT CAR", _exit_car, 112.0)
 
@@ -1113,6 +1246,9 @@ func _build_panels() -> void:
     empire_box.add_child(empire_info)
     _add_button(empire_box, "BUY STARTER HOME • ₹3,000", _buy_home, 280.0)
     _add_button(empire_box, "ENTER / EXIT HOME", _home_action, 280.0)
+    _add_button(empire_box, "BUY APARTMENT • ₹8,000", _buy_apartment, 280.0)
+    _add_button(empire_box, "ENTER / EXIT APARTMENT", _apartment_action, 280.0)
+    _add_button(empire_box, "COLLECT APARTMENT RENT", _collect_apartment_rent, 280.0)
     _add_button(empire_box, "ENTER / EXIT SHOP", _shop_action, 280.0)
     bike_button = _add_button(empire_box, "BUY MOTORBIKE • ₹2,500", _buy_bike, 280.0)
     _add_button(empire_box, "BUY CORNER SHOP • ₹4,000", _buy_shop, 280.0)
@@ -1246,6 +1382,9 @@ func _move_player(delta: float) -> void:
     if GameState.inside_home:
         player.global_position.x = clampf(player.global_position.x, 143.4, 156.6)
         player.global_position.z = clampf(player.global_position.z, 143.4, 156.6)
+    elif GameState.inside_apartment:
+        player.global_position.x = clampf(player.global_position.x, 143.4, 156.6)
+        player.global_position.z = clampf(player.global_position.z, -156.6, -143.4)
     elif GameState.inside_shop:
         player.global_position.x = clampf(player.global_position.x, 173.4, 186.6)
         player.global_position.z = clampf(player.global_position.z, 143.4, 156.6)
@@ -1322,7 +1461,7 @@ func _drive_car(delta: float) -> void:
 
 func _update_camera(delta: float) -> void:
     var focus := active_vehicle.global_position if driving and is_instance_valid(active_vehicle) else player.global_position
-    var inside_building := GameState.inside_home or GameState.inside_shop
+    var inside_building := GameState.inside_home or GameState.inside_shop or GameState.inside_apartment
     var offset := Vector3(0.0, 2.35 if inside_building else 5.0, camera_distance).rotated(Vector3.UP, camera_yaw)
     var desired := focus + offset
     if GameState.inside_home:
@@ -1333,6 +1472,10 @@ func _update_camera(delta: float) -> void:
         desired.x = clampf(desired.x, 173.5, 186.5)
         desired.y = clampf(desired.y, 0.8, 3.55)
         desired.z = clampf(desired.z, 143.5, 156.5)
+    elif GameState.inside_apartment:
+        desired.x = clampf(desired.x, 143.5, 156.5)
+        desired.y = clampf(desired.y, 0.8, 3.55)
+        desired.z = clampf(desired.z, -156.5, -143.5)
     camera.global_position = camera.global_position.lerp(desired, clampf(delta * 5.0, 0.0, 1.0))
     camera.look_at(focus + Vector3(0.0, 1.0, 0.0), Vector3.UP)
 
@@ -1442,6 +1585,9 @@ func _interact() -> void:
     if GameState.inside_home:
         _exit_home()
         return
+    if GameState.inside_apartment:
+        _exit_apartment()
+        return
     if GameState.inside_shop:
         _exit_shop()
         return
@@ -1453,6 +1599,9 @@ func _interact() -> void:
         return
     if GameState.shop_owned and player.global_position.distance_to(SHOP_DOOR_POSITION) <= 5.5:
         _enter_shop()
+        return
+    if GameState.apartment_owned and player.global_position.distance_to(APARTMENT_DOOR_POSITION) <= 5.5:
+        _enter_apartment()
         return
     var nearest_vehicle: CharacterBody3D = car
     var nearest_distance := player.global_position.distance_to(car.global_position)
@@ -1588,8 +1737,8 @@ func _buy_meal() -> void:
         _refresh_ui()
 
 func _next_day() -> void:
-    if not GameState.inside_home:
-        _show_toast("You must enter your home before sleeping.")
+    if not GameState.inside_home and not GameState.inside_apartment:
+        _show_toast("You must enter your home or apartment before sleeping.")
         return
     if GameState.sleep_at_home():
         _refresh_ui()
@@ -1605,6 +1754,8 @@ func _sync_save_state() -> void:
         GameState.inside_home = false
     if GameState.inside_shop and not GameState.shop_owned:
         GameState.inside_shop = false
+    if GameState.inside_apartment and not GameState.apartment_owned:
+        GameState.inside_apartment = false
 
 func _save_now() -> void:
     _sync_save_state()
@@ -1623,12 +1774,14 @@ func _refresh_ui() -> void:
     _update_fuel_hud()
     if is_instance_valid(map_panel) and map_panel.visible:
         _update_minimap()
-    var travel_state := "HOME INTERIOR" if GameState.inside_home else ("SHOP INTERIOR" if GameState.inside_shop else ("DRIVING %s" % active_vehicle_kind.to_upper() if driving else "ON FOOT"))
+    var travel_state := "HOME INTERIOR" if GameState.inside_home else ("APARTMENT INTERIOR" if GameState.inside_apartment else ("SHOP INTERIOR" if GameState.inside_shop else ("DRIVING %s" % active_vehicle_kind.to_upper() if driving else "ON FOOT")))
     location_label.text = "%s  •  NET WORTH ₹%d" % [travel_state, GameState.net_worth()]
     if is_instance_valid(home_sign):
         home_sign.text = "YOUR STARTER HOME" if GameState.home_owned else "STARTER HOME • ₹3,000"
     if is_instance_valid(shop_sign):
         shop_sign.text = "YOUR TEA HOUSE" if GameState.shop_owned else "TEA HOUSE • FOR SALE"
+    if is_instance_valid(apartment_sign):
+        apartment_sign.text = "YOUR RENTAL APARTMENT" if GameState.apartment_owned else "APARTMENT • ₹8,000"
     if is_instance_valid(bank_info):
         var recent := ""
         for i in range(mini(GameState.transactions.size(), 5)):
@@ -1673,8 +1826,10 @@ func _refresh_ui() -> void:
 func _update_minimap() -> void:
     if not is_instance_valid(minimap_display) or not is_instance_valid(player):
         return
-    var map_player_position: Vector3 = HOME_DOOR_POSITION if GameState.inside_home else (SHOP_DOOR_POSITION if GameState.inside_shop else player.global_position)
+    var map_player_position: Vector3 = HOME_DOOR_POSITION if GameState.inside_home else (SHOP_DOOR_POSITION if GameState.inside_shop else (APARTMENT_DOOR_POSITION if GameState.inside_apartment else player.global_position))
     minimap_display.set("player_position", map_player_position)
+    minimap_display.set("apartment_position", APARTMENT_DOOR_POSITION)
+    minimap_display.set("has_apartment", true)
     minimap_display.set("home_position", HOME_DOOR_POSITION)
     minimap_display.set("has_home", true)
     minimap_display.set("shop_position", SHOP_DOOR_POSITION)
