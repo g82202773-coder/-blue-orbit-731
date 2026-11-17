@@ -76,10 +76,10 @@ func _initialize() -> void:
     assert(is_equal_approx(state.game_minutes, 480.0), "Sleeping should set the clock to 8:00 AM.")
     assert(is_equal_approx(state.energy_percent, 100.0), "Sleeping should fully restore energy.")
     assert(is_equal_approx(state.hunger_percent, 70.0), "Sleeping should consume 15 hunger points.")
+    assert(state.shop_stock_units == 4, "The shop should have four units left after three trading days.")
     assert(state.restock_shop(), "A shop owner should be able to purchase more stock.")
     assert(state.wallet == 800 and state.shop_stock_units == 24, "Restocking should cost ₹300 and add 20 units.")
     assert(state.uncollected_shop_income == 700, "Daily business income should accrue on each full day.")
-    assert(state.shop_stock_units == 4, "The shop should have four units left after three trading days.")
     assert(state.loan_balance == 1593, "Loan interest should accrue when sleeping advances a day.")
 
     state.set_player_position(Vector3(150.0, 1.0, 150.0))
