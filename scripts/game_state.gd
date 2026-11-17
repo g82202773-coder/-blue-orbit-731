@@ -6,6 +6,8 @@ signal toast_requested(message: String)
 const SAVE_PATH := "user://life_empire_save.json"
 const STARTING_WALLET := 5000
 const MAX_TRANSACTIONS := 40
+const BANK_SAVINGS_INTEREST_RATE := 0.005
+const LOAN_DAILY_INTEREST_RATE := 0.02
 
 var wallet: int = STARTING_WALLET
 var bank_balance: int = 0
@@ -212,6 +214,11 @@ func repay_loan(amount: int) -> bool:
     return true
 
 func _apply_daily_finances() -> void:
+    if bank_balance > 0:
+        var savings_interest: int = int(floor(float(bank_balance) * BANK_SAVINGS_INTEREST_RATE))
+        if savings_interest > 0:
+            bank_balance += savings_interest
+            add_transaction("Bank savings interest +₹%d" % savings_interest)
     if apartment_owned:
         uncollected_apartment_rent += 200
         add_transaction("Apartment rent accrued +₹200")
@@ -223,7 +230,7 @@ func _apply_daily_finances() -> void:
         uncollected_shop_income += daily_revenue
         add_transaction("Shop sold %d units • +₹%d" % [units_sold, daily_revenue])
     if loan_balance > 0:
-        var interest: int = maxi(1, int(ceil(float(loan_balance) * 0.02)))
+        var interest: int = maxi(1, int(ceil(float(loan_balance) * LOAN_DAILY_INTEREST_RATE)))
         loan_balance += interest
         add_transaction("Loan interest +₹%d" % interest)
 
@@ -462,6 +469,22 @@ func buy_shop() -> bool:
     save_game()
     toast_requested.emit("Your corner shop is open!")
     return true
+
+func shop_tier_name() -> String:
+    match shop_upgrade_level:
+        1:
+            return "Mini Mart"
+        2:
+            return "Supermarket"
+        _:
+            return "Corner Shop"
+
+func shop_next_upgrade_name() -> String:
+    if shop_upgrade_level <= 0:
+        return "Mini Mart"
+    if shop_upgrade_level == 1:
+        return "Supermarket"
+    return "Fully Upgraded"
 
 func shop_upgrade_cost() -> int:
     match shop_upgrade_level:
