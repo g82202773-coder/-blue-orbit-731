@@ -1117,9 +1117,11 @@ func _physics_process(delta: float) -> void:
     if player == null or car == null:
         return
     GameState.advance_clock(delta)
-    _update_day_night()
     clock_display_time += delta
     if clock_display_time >= 1.0:
+        # Sky and lighting materials are expensive to refresh on some mobile
+        # GPUs. World time advances continuously; render lighting once per second.
+        _update_day_night()
         if is_instance_valid(time_label):
             time_label.text = "DAY %d  •  %s" % [GameState.day_number, GameState.clock_text()]
         clock_display_time = 0.0
@@ -1470,7 +1472,10 @@ func _toggle_map() -> void:
     var should_open := not map_panel.visible
     _hide_panels()
     map_panel.visible = should_open
-    _update_minimap()
+    if is_instance_valid(minimap_display):
+        minimap_display.set_process(should_open)
+    if should_open:
+        _update_minimap()
 
 func _take_loan() -> void:
     if GameState.take_loan(2000):
@@ -1499,6 +1504,8 @@ func _hide_panels() -> void:
     bank_panel.hide()
     phone_panel.hide()
     map_panel.hide()
+    if is_instance_valid(minimap_display):
+        minimap_display.set_process(false)
     job_panel.hide()
     empire_panel.hide()
 
@@ -1531,7 +1538,8 @@ func _hire_shop_employee() -> void:
         _refresh_ui()
 
 func _collect_shop() -> void:
-    GameState.collect_shop_income()
+    if GameState.collect_shop_income():
+        _refresh_ui()
 
 func _buy_meal() -> void:
     if GameState.buy_meal():
