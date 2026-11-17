@@ -11,6 +11,7 @@ var wallet: int = STARTING_WALLET
 var bank_balance: int = 0
 var lifetime_earnings: int = 0
 var day_number: int = 1
+var game_minutes: float = 480.0
 var home_owned: bool = false
 var shop_owned: bool = false
 var bike_owned: bool = false
@@ -184,8 +185,35 @@ func collect_shop_income() -> bool:
     toast_requested.emit("Collected ₹%d from your shop." % amount)
     return true
 
+func advance_clock(real_seconds: float) -> void:
+    if real_seconds <= 0.0:
+        return
+    game_minutes += real_seconds
+    var crossed_day := false
+    while game_minutes >= 1440.0:
+        game_minutes -= 1440.0
+        day_number += 1
+        crossed_day = true
+        if shop_owned:
+            uncollected_shop_income += 250 + shop_employee_count * 100
+        add_transaction("Started Day %d" % day_number)
+    if crossed_day:
+        save_game()
+        toast_requested.emit("A new day has started. Day %d." % day_number)
+
+func clock_text() -> String:
+    var total_minutes := posi(int(floor(game_minutes))) % 1440
+    var hour := total_minutes / 60
+    var minute := total_minutes % 60
+    var suffix := "AM" if hour < 12 else "PM"
+    var display_hour := hour % 12
+    if display_hour == 0:
+        display_hour = 12
+    return "%02d:%02d %s" % [display_hour, minute, suffix]
+
 func advance_day() -> void:
     day_number += 1
+    game_minutes = 8.0 * 60.0
     if shop_owned:
         uncollected_shop_income += 250 + shop_employee_count * 100
     add_transaction("Started Day %d" % day_number)
@@ -212,6 +240,7 @@ func save_game() -> void:
         "bank_balance": bank_balance,
         "lifetime_earnings": lifetime_earnings,
         "day_number": day_number,
+        "game_minutes": game_minutes,
         "home_owned": home_owned,
         "shop_owned": shop_owned,
         "bike_owned": bike_owned,
@@ -268,6 +297,7 @@ func load_game() -> void:
     bank_balance = maxi(0, int(parsed.get("bank_balance", parsed.get("bank", 0))))
     lifetime_earnings = maxi(0, int(parsed.get("lifetime_earnings", parsed.get("total_earned", 0))))
     day_number = maxi(1, int(parsed.get("day_number", 1)))
+    game_minutes = fposmod(float(parsed.get("game_minutes", 480.0)), 1440.0)
     home_owned = bool(parsed.get("home_owned", parsed.get("property_owned", false)))
     shop_owned = bool(parsed.get("shop_owned", parsed.get("business_owned", false)))
     bike_owned = bool(parsed.get("bike_owned", false))
