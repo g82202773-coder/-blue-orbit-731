@@ -11,6 +11,8 @@ const PEDESTRIAN_SCRIPT = preload("res://scripts/pedestrian.gd")
 const MINIMAP_SCRIPT = preload("res://scripts/minimap.gd")
 const HOME_DOOR_POSITION := Vector3(100.0, 1.0, 98.0)
 const HOME_INTERIOR_POSITION := Vector3(150.0, 1.0, 150.0)
+const SHOP_DOOR_POSITION := Vector3(-20.0, 1.0, -68.0)
+const SHOP_INTERIOR_POSITION := Vector3(180.0, 1.0, 150.0)
 
 var mats: Dictionary = {}
 var game_environment: Environment
@@ -18,6 +20,8 @@ var procedural_sky: ProceduralSkyMaterial
 var sun_light: DirectionalLight3D
 var home_interior: Node3D
 var home_sign: Label3D
+var shop_interior: Node3D
+var shop_sign: Label3D
 var window_transforms: Array[Transform3D] = []
 var trim_transforms: Array[Transform3D] = []
 var lane_transforms: Array[Transform3D] = []
@@ -89,6 +93,7 @@ func _ready() -> void:
     _build_environment()
     _build_city()
     _build_home_property()
+    _build_shop_interior()
     _build_player()
     _build_car()
     if GameState.bike_owned:
@@ -112,13 +117,24 @@ func _ready() -> void:
     if player.global_position.y < 0.8:
         player.global_position.y = 1.0
     if GameState.inside_home and GameState.home_owned:
+        GameState.inside_shop = false
         home_interior.show()
+        shop_interior.hide()
+        GameState.was_driving = false
+        player.global_position = GameState.player_position
+        camera_distance = 5.5
+    elif GameState.inside_shop and GameState.shop_owned:
+        GameState.inside_home = false
+        home_interior.hide()
+        shop_interior.show()
         GameState.was_driving = false
         player.global_position = GameState.player_position
         camera_distance = 5.5
     else:
         GameState.inside_home = false
+        GameState.inside_shop = false
         home_interior.hide()
+        shop_interior.hide()
     if GameState.was_driving:
         active_vehicle_kind = GameState.active_vehicle_kind
         if active_vehicle_kind == "motorbike" and is_instance_valid(bike):
@@ -426,6 +442,88 @@ func _home_action() -> void:
     else:
         _enter_home()
 
+func _build_shop_interior() -> void:
+    shop_interior = Node3D.new()
+    shop_interior.name = "OwnedShopInterior"
+    shop_interior.position = Vector3(180.0, 0.0, 150.0)
+    add_child(shop_interior)
+    _static_box(shop_interior, Vector3(14.0, 0.18, 14.0), Vector3(0.0, -0.1, 0.0), mats["concrete"], "ShopFloorCollision")
+    _box_mesh(shop_interior, Vector3(5.8, 3.8, 0.25), Vector3(-4.1, 1.8, -7.0), mats["cream"], "ShopNorthLeft")
+    _box_mesh(shop_interior, Vector3(5.8, 3.8, 0.25), Vector3(4.1, 1.8, -7.0), mats["cream"], "ShopNorthRight")
+    _box_mesh(shop_interior, Vector3(14.0, 3.8, 0.25), Vector3(0.0, 1.8, 7.0), mats["cream"], "ShopSouthWall")
+    _box_mesh(shop_interior, Vector3(0.25, 3.8, 14.0), Vector3(-7.0, 1.8, 0.0), mats["cream"], "ShopWestWall")
+    _box_mesh(shop_interior, Vector3(0.25, 3.8, 14.0), Vector3(7.0, 1.8, 0.0), mats["cream"], "ShopEastWall")
+    _box_mesh(shop_interior, Vector3(1.4, 2.9, 0.12), Vector3(0.0, 1.45, -6.84), mats["dark"], "ShopFrontDoor")
+    # Sales counter and cash register face the entrance.
+    _box_mesh(shop_interior, Vector3(5.6, 0.95, 1.0), Vector3(0.0, 0.78, -3.8), mats["brick"], "ShopCounter")
+    _box_mesh(shop_interior, Vector3(0.65, 0.42, 0.5), Vector3(-1.7, 1.45, -3.8), mats["dark"], "CashRegister")
+    # Merchandise shelves on both walls; stock is represented by compact product blocks.
+    for shelf_x in [-5.2, 5.2]:
+        for shelf_z in [-3.0, 0.0, 3.0]:
+            _box_mesh(shop_interior, Vector3(0.65, 2.4, 2.4), Vector3(shelf_x, 1.2, shelf_z), mats["dark"], "ShopShelf")
+            for row in range(3):
+                for column in range(2):
+                    var product_color: Material = mats["yellow"] if (row + column) % 2 == 0 else mats["red"]
+                    _box_mesh(shop_interior, Vector3(0.42, 0.42, 0.48), Vector3(shelf_x - signf(shelf_x) * 0.38, 0.48 + float(row) * 0.68, shelf_z - 0.55 + float(column) * 0.95), product_color, "ShelfProduct")
+    _box_mesh(shop_interior, Vector3(1.2, 2.0, 1.1), Vector3(3.9, 1.0, -5.4), mats["blue"], "DrinksFridge")
+    _box_mesh(shop_interior, Vector3(3.0, 0.12, 2.2), Vector3(0.0, 0.12, 2.8), mats["cream"], "ShopDisplayTable")
+    var shop_light := StandardMaterial3D.new()
+    shop_light.albedo_color = Color("#f4dfa9")
+    shop_light.emission_enabled = true
+    shop_light.emission = Color("#f4dfa9")
+    shop_light.emission_energy_multiplier = 0.45
+    _box_mesh(shop_interior, Vector3(1.1, 0.12, 1.1), Vector3(0.0, 3.35, 0.0), shop_light, "ShopCeilingLight")
+    shop_interior.hide()
+
+func _enter_shop() -> void:
+    if driving:
+        _show_toast("Exit your vehicle before entering the shop.")
+        return
+    if not GameState.shop_owned:
+        _show_toast("Purchase the corner shop from the Empire menu first.")
+        return
+    if player.global_position.distance_to(SHOP_DOOR_POSITION) > 6.0:
+        _show_toast("Go to your shop's front entrance to enter.")
+        return
+    GameState.shop_return_position = player.global_position
+    GameState.inside_shop = true
+    GameState.inside_home = false
+    GameState.was_driving = false
+    driving = false
+    active_vehicle = null
+    car_speed = 0.0
+    shop_interior.show()
+    home_interior.hide()
+    player.global_position = SHOP_INTERIOR_POSITION
+    player.rotation.y = 0.0
+    player.velocity = Vector3.ZERO
+    camera_yaw = 0.0
+    camera_distance = 5.5
+    GameState.set_player_position(player.global_position)
+    GameState.save_game()
+    _refresh_ui()
+    _show_toast("Welcome to your shop. Restock inventory and manage daily sales here.")
+
+func _exit_shop() -> void:
+    if not GameState.inside_shop:
+        return
+    shop_interior.hide()
+    GameState.inside_shop = false
+    player.global_position = GameState.shop_return_position
+    player.velocity = Vector3.ZERO
+    camera_yaw = 0.0
+    camera_distance = 8.5
+    GameState.set_player_position(player.global_position)
+    GameState.save_game()
+    _refresh_ui()
+    _show_toast("You left your shop.")
+
+func _shop_action() -> void:
+    if GameState.inside_shop:
+        _exit_shop()
+    else:
+        _enter_shop()
+
 func _build_building(center: Vector3, size: Vector3, facade: Material, index: int) -> void:
     var body := StaticBody3D.new()
     body.position = center
@@ -509,6 +607,8 @@ func _build_shop_front(parent: Node3D, size: Vector3, index: int) -> void:
     sign.modulate = Color("#fff4d8")
     sign.position = Vector3(0.0, -size.y * 0.5 + 1.75, -size.z * 0.5 - 0.13)
     sign.pixel_size = 0.012
+    if index == 4:
+        shop_sign = sign
     parent.add_child(sign)
 
 func _build_street_lights() -> void:
@@ -896,6 +996,7 @@ func _build_touch_controls() -> void:
     _add_hold_button(action_box, "BRAKE", func(): throttle_touch = -1.0, func(): throttle_touch = 0.0, 112.0)
     _add_button(action_box, "INTERACT", _interact, 112.0)
     _add_button(action_box, "HOME / EXIT", _home_action, 112.0)
+    _add_button(action_box, "SHOP / EXIT", _shop_action, 112.0)
     _add_button(action_box, "EXIT CAR", _exit_car, 112.0)
 
 func _set_move_x(value: float) -> void:
@@ -991,6 +1092,7 @@ func _build_panels() -> void:
     empire_box.add_child(empire_info)
     _add_button(empire_box, "BUY STARTER HOME • ₹3,000", _buy_home, 280.0)
     _add_button(empire_box, "ENTER / EXIT HOME", _home_action, 280.0)
+    _add_button(empire_box, "ENTER / EXIT SHOP", _shop_action, 280.0)
     bike_button = _add_button(empire_box, "BUY MOTORBIKE • ₹2,500", _buy_bike, 280.0)
     _add_button(empire_box, "BUY CORNER SHOP • ₹4,000", _buy_shop, 280.0)
     _add_button(empire_box, "RESTOCK SHOP • ₹300", _restock_shop, 280.0)
@@ -1121,6 +1223,9 @@ func _move_player(delta: float) -> void:
     if GameState.inside_home:
         player.global_position.x = clampf(player.global_position.x, 143.4, 156.6)
         player.global_position.z = clampf(player.global_position.z, 143.4, 156.6)
+    elif GameState.inside_shop:
+        player.global_position.x = clampf(player.global_position.x, 173.4, 186.6)
+        player.global_position.z = clampf(player.global_position.z, 143.4, 156.6)
     _animate_player(delta, input_axis.length() > 0.05, speed)
     GameState.set_player_position(player.global_position)
 
@@ -1191,10 +1296,15 @@ func _drive_car(delta: float) -> void:
 
 func _update_camera(delta: float) -> void:
     var focus := active_vehicle.global_position if driving and is_instance_valid(active_vehicle) else player.global_position
-    var offset := Vector3(0.0, 2.35 if GameState.inside_home else 5.0, camera_distance).rotated(Vector3.UP, camera_yaw)
+    var inside_building := GameState.inside_home or GameState.inside_shop
+    var offset := Vector3(0.0, 2.35 if inside_building else 5.0, camera_distance).rotated(Vector3.UP, camera_yaw)
     var desired := focus + offset
     if GameState.inside_home:
         desired.x = clampf(desired.x, 143.5, 156.5)
+        desired.y = clampf(desired.y, 0.8, 3.55)
+        desired.z = clampf(desired.z, 143.5, 156.5)
+    elif GameState.inside_shop:
+        desired.x = clampf(desired.x, 173.5, 186.5)
         desired.y = clampf(desired.y, 0.8, 3.55)
         desired.z = clampf(desired.z, 143.5, 156.5)
     camera.global_position = camera.global_position.lerp(desired, clampf(delta * 5.0, 0.0, 1.0))
@@ -1299,11 +1409,17 @@ func _interact() -> void:
     if GameState.inside_home:
         _exit_home()
         return
+    if GameState.inside_shop:
+        _exit_shop()
+        return
     if driving:
         _exit_car()
         return
     if GameState.home_owned and player.global_position.distance_to(HOME_DOOR_POSITION) <= 5.5:
         _enter_home()
+        return
+    if GameState.shop_owned and player.global_position.distance_to(SHOP_DOOR_POSITION) <= 5.5:
+        _enter_shop()
         return
     var nearest_vehicle: CharacterBody3D = car
     var nearest_distance := player.global_position.distance_to(car.global_position)
@@ -1433,6 +1549,8 @@ func _sync_save_state() -> void:
         GameState.was_driving = false
     if GameState.inside_home and not GameState.home_owned:
         GameState.inside_home = false
+    if GameState.inside_shop and not GameState.shop_owned:
+        GameState.inside_shop = false
 
 func _save_now() -> void:
     _sync_save_state()
@@ -1451,10 +1569,12 @@ func _refresh_ui() -> void:
     _update_fuel_hud()
     if is_instance_valid(map_panel) and map_panel.visible:
         _update_minimap()
-    var travel_state := "HOME INTERIOR" if GameState.inside_home else ("DRIVING %s" % active_vehicle_kind.to_upper() if driving else "ON FOOT")
+    var travel_state := "HOME INTERIOR" if GameState.inside_home else ("SHOP INTERIOR" if GameState.inside_shop else ("DRIVING %s" % active_vehicle_kind.to_upper() if driving else "ON FOOT"))
     location_label.text = "%s  •  NET WORTH ₹%d" % [travel_state, GameState.net_worth()]
     if is_instance_valid(home_sign):
         home_sign.text = "YOUR STARTER HOME" if GameState.home_owned else "STARTER HOME • ₹3,000"
+    if is_instance_valid(shop_sign):
+        shop_sign.text = "YOUR TEA HOUSE" if GameState.shop_owned else "TEA HOUSE • FOR SALE"
     if is_instance_valid(bank_info):
         var recent := ""
         for i in range(mini(GameState.transactions.size(), 5)):
@@ -1489,10 +1609,11 @@ func _refresh_ui() -> void:
 func _update_minimap() -> void:
     if not is_instance_valid(minimap_display) or not is_instance_valid(player):
         return
-    minimap_display.set("player_position", HOME_DOOR_POSITION if GameState.inside_home else player.global_position)
+    var map_player_position: Vector3 = HOME_DOOR_POSITION if GameState.inside_home else (SHOP_DOOR_POSITION if GameState.inside_shop else player.global_position)
+    minimap_display.set("player_position", map_player_position)
     minimap_display.set("home_position", HOME_DOOR_POSITION)
     minimap_display.set("has_home", true)
-    minimap_display.set("shop_position", Vector3(-20.0, 0.0, 20.0))
+    minimap_display.set("shop_position", SHOP_DOOR_POSITION)
     minimap_display.set("has_shop", GameState.shop_owned)
     var shown_vehicle: Node3D = active_vehicle if driving and is_instance_valid(active_vehicle) else car
     if is_instance_valid(shown_vehicle):
