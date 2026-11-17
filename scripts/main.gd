@@ -1635,7 +1635,8 @@ func _refresh_ui() -> void:
             recent += "• %s\n" % GameState.transactions[i]
         bank_info.text = "Wallet: ₹%d\nBank: ₹%d\nOutstanding loan: ₹%d\nDaily interest: 2%%\nNet worth: ₹%d\n\nRECENT TRANSACTIONS\n%s" % [GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.net_worth(), recent]
     if is_instance_valid(phone_info):
-        phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nLoan: ₹%d\nPlayer Level: %d  •  XP: %d / %d\nFuel: %d%%  •  Car: %d%%\nBike: %d%%  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs completed: %d\nService vehicles nearby to restore condition." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), int(round(GameState.fuel_percent)), int(round(GameState.car_condition_percent)), int(round(GameState.bike_condition_percent)), int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed]
+        var phone_bike_condition: String = "%d%%" % int(round(GameState.bike_condition_percent)) if GameState.bike_owned else "NOT OWNED"
+        phone_info.text = "Day %d  •  %s\nWallet ₹%d  •  Bank ₹%d\nLoan: ₹%d\nPlayer Level: %d  •  XP: %d / %d\nFuel: %d%%  •  Car: %d%%\nBike: %s  •  Hunger: %d%%\nEnergy: %d%%  •  Jobs completed: %d\nStand beside a vehicle and service it to restore condition." % [GameState.day_number, GameState.clock_text(), GameState.wallet, GameState.bank_balance, GameState.loan_balance, GameState.player_level, GameState.player_xp, GameState.xp_to_next_level(), int(round(GameState.fuel_percent)), int(round(GameState.car_condition_percent)), phone_bike_condition, int(round(GameState.hunger_percent)), int(round(GameState.energy_percent)), GameState.missions_completed]
     if is_instance_valid(job_info):
         if job_stage == 0:
             var courier_status: String = "AVAILABLE" if GameState.can_accept_job("Courier parcel") else "LOCKED • LEVEL 2"
@@ -1695,8 +1696,9 @@ func _update_fuel_hud() -> void:
         fuel_label.text = "FUEL  %d%%" % int(round(GameState.fuel_percent))
         fuel_label.modulate = Color("#e4d8a7") if GameState.fuel_percent > 20.0 else Color("#e28b78")
     if is_instance_valid(condition_label):
-        condition_label.text = "CAR %d%%  •  BIKE %d%%" % [int(round(GameState.car_condition_percent)), int(round(GameState.bike_condition_percent))]
-        var lowest_condition: float = minf(GameState.car_condition_percent, GameState.bike_condition_percent)
+        var bike_condition_text: String = "%d%%" % int(round(GameState.bike_condition_percent)) if GameState.bike_owned else "—"
+        condition_label.text = "CAR %d%%  •  BIKE %s" % [int(round(GameState.car_condition_percent)), bike_condition_text]
+        var lowest_condition: float = minf(GameState.car_condition_percent, GameState.bike_condition_percent) if GameState.bike_owned else GameState.car_condition_percent
         condition_label.modulate = Color("#e28b78") if lowest_condition < 30.0 else Color("#d8e1d4")
 
 func _show_toast(message: String) -> void:
