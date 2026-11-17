@@ -654,6 +654,11 @@ func load_game() -> void:
         float(parsed.get("active_job_destination_y", 0.85)),
         float(parsed.get("active_job_destination_z", 0.0))
     )
+    # Older saves predate mission deadlines. Give an already-active legacy job
+    # its normal time allowance instead of expiring it immediately on upgrade.
+    if active_job_stage > 0 and active_job_time_limit <= 0.0:
+        active_job_time_limit = job_time_limit_for(active_job_title)
+        active_job_time_remaining = active_job_time_limit
     fuel_percent = clampf(float(parsed.get("fuel_percent", 100.0)), 0.0, 100.0)
     car_condition_percent = clampf(float(parsed.get("car_condition_percent", 100.0)), 0.0, 100.0)
     bike_condition_percent = clampf(float(parsed.get("bike_condition_percent", 100.0)), 0.0, 100.0)
