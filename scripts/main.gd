@@ -104,89 +104,25 @@ var left_pad: PanelContainer
 var right_pad: PanelContainer
 
 func _ready() -> void:
-    # Target stable 30 FPS on baseline Android hardware. Render the 3D world
-    # slightly below native resolution while keeping all HUD elements crisp.
+    # City showcase mode: render Navapura only. No player, vehicles, pedestrians,
+    # missions, HUD, economy interactions, or gameplay actors are instantiated.
     Engine.max_fps = 60
     get_viewport().scaling_3d_scale = 0.78
-    GameState.state_changed.connect(_refresh_ui)
-    GameState.toast_requested.connect(_show_toast)
     _create_materials()
     _build_environment()
     _build_city()
-    _build_fuel_station()
-    _build_home_property()
-    _build_shop_interior()
-    _build_apartment_property()
-    _build_player()
-    _build_car()
-    if GameState.bike_owned:
-        _build_bike()
-    _build_job_markers()
-    job_stage = GameState.active_job_stage
-    job_title = GameState.active_job_title
-    job_reward_active = GameState.active_job_reward
-    if job_stage > 0:
-        pickup_marker.global_position = GameState.active_job_pickup_position
-        drop_marker.global_position = GameState.active_job_destination_position
-        pickup_marker.visible = job_stage == 1
-        drop_marker.visible = job_stage == 2
-    _build_hud()
-    car.global_position = GameState.car_position
-    car.rotation.y = GameState.car_rotation_y
-    if is_instance_valid(bike):
-        bike.global_position = GameState.bike_position
-        bike.rotation.y = GameState.bike_rotation_y
-    player.global_position = GameState.player_position
-    if player.global_position.y < 0.8:
-        player.global_position.y = 1.0
-    if GameState.inside_home and GameState.home_owned:
-        GameState.inside_shop = false
-        GameState.inside_apartment = false
-        home_interior.show()
-        shop_interior.hide()
-        apartment_interior.hide()
-        GameState.was_driving = false
-        player.global_position = GameState.player_position
-        camera_distance = 5.5
-    elif GameState.inside_shop and GameState.shop_owned:
-        GameState.inside_home = false
-        GameState.inside_apartment = false
-        home_interior.hide()
-        shop_interior.show()
-        apartment_interior.hide()
-        GameState.was_driving = false
-        player.global_position = GameState.player_position
-        camera_distance = 5.5
-    elif GameState.inside_apartment and GameState.apartment_owned:
-        GameState.inside_home = false
-        GameState.inside_shop = false
-        home_interior.hide()
-        shop_interior.hide()
-        apartment_interior.show()
-        GameState.was_driving = false
-        player.global_position = GameState.player_position
-        camera_distance = 5.5
-    else:
-        GameState.inside_home = false
-        GameState.inside_shop = false
-        GameState.inside_apartment = false
-        home_interior.hide()
-        shop_interior.hide()
-        apartment_interior.hide()
-    if GameState.was_driving:
-        active_vehicle_kind = GameState.active_vehicle_kind
-        if active_vehicle_kind == "motorbike" and is_instance_valid(bike):
-            active_vehicle = bike
-        else:
-            active_vehicle_kind = "car"
-            active_vehicle = car
-        driving = true
-        player.global_position = active_vehicle.global_position + Vector3(0.0, 0.1, 0.0)
-        player.hide()
-        player.collision_layer = 0
-        player.collision_mask = 0
-    _refresh_ui()
-    _show_toast("Welcome to Navapura. Start a delivery and build your empire.")
+    _build_city_landmarks()
+    _build_city_showcase_camera()
+
+func _build_city_showcase_camera() -> void:
+    var showcase_camera := Camera3D.new()
+    showcase_camera.name = "CityShowcaseCamera"
+    showcase_camera.position = Vector3(0.0, 118.0, 156.0)
+    showcase_camera.fov = 58.0
+    showcase_camera.near = 0.1
+    showcase_camera.far = 420.0
+    add_child(showcase_camera)
+    showcase_camera.look_at(Vector3(0.0, 0.0, 0.0), Vector3.UP)
 
 func _create_materials() -> void:
     mats = {
@@ -316,10 +252,13 @@ func _build_city() -> void:
     var index := 0
     for x in [-60.0, -20.0, 20.0, 60.0]:
         for z in [-60.0, -20.0, 20.0, 60.0]:
-            var width := 13.0 + float(index % 3) * 1.4
-            var depth := 13.0 + float((index + 1) % 3) * 1.3
-            var height := 7.0 + float((index * 5) % 12)
-            _build_building(Vector3(x, height * 0.5, z), Vector3(width, height, depth), palettes[index % palettes.size()], index)
+            # Reserve four central commercial plots for individually modelled landmarks.
+            var landmark_plot := (x == -20.0 and z == -20.0) or (x == 20.0 and z == -20.0) or (x == -20.0 and z == 20.0) or (x == 20.0 and z == 20.0)
+            if not landmark_plot:
+                var width := 13.0 + float(index % 3) * 1.4
+                var depth := 13.0 + float((index + 1) % 3) * 1.3
+                var height := 7.0 + float((index * 5) % 12)
+                _build_building(Vector3(x, height * 0.5, z), Vector3(width, height, depth), palettes[index % palettes.size()], index)
             index += 1
 
     for p in [
@@ -335,8 +274,100 @@ func _build_city() -> void:
     _build_road_markings()
     _build_street_sign(Vector3(0.0, 0.0, -3.0), "NAVAPURA")
     _build_street_lights()
-    _build_traffic()
-    _build_pedestrians()
+
+func _build_city_landmarks() -> void:
+    _build_mall(Vector3(-20.0, 0.0, -20.0))
+    _build_bank(Vector3(20.0, 0.0, -20.0))
+    _build_car_showroom(Vector3(-20.0, 0.0, 20.0), "NAVAPURA MOTORS", Color("#286b9b"))
+    _build_car_showroom(Vector3(20.0, 0.0, 20.0), "CITY AUTO GALLERY", Color("#9b573b"))
+    _build_office_tower(Vector3(60.0, 0.0, -20.0))
+
+func _build_mall(center: Vector3) -> void:
+    var mall := Node3D.new()
+    mall.name = "NavapuraCentralMall"
+    mall.position = center
+    add_child(mall)
+    _static_box(mall, Vector3(23.0, 9.0, 19.0), Vector3(0.0, 4.5, 0.0), mats["concrete"], "MallStructure")
+    _box_mesh(mall, Vector3(23.3, 0.65, 19.3), Vector3(0.0, 9.25, 0.0), mats["dark"], "MallRoofCap")
+    _box_mesh(mall, Vector3(20.5, 5.8, 0.22), Vector3(0.0, 4.7, -9.62), mats["glass"], "MallCurtainWall")
+    _box_mesh(mall, Vector3(21.0, 0.42, 0.45), Vector3(0.0, 7.8, -9.45), mats["blue"], "MallFacadeBand")
+    for x in [-9.5, -5.7, 5.7, 9.5]:
+        _box_mesh(mall, Vector3(0.32, 6.0, 0.42), Vector3(x, 4.7, -9.75), mats["white"], "MallFacadeMullion")
+    for x in [-7.0, 7.0]:
+        _static_box(mall, Vector3(0.55, 6.0, 0.55), Vector3(x, 3.0, -10.0), mats["white"], "MallEntranceColumn")
+    _box_mesh(mall, Vector3(8.0, 0.22, 4.2), Vector3(0.0, 0.12, -11.2), mats["sidewalk"], "MallEntranceCanopy")
+    var sign := Label3D.new()
+    sign.name = "MallSign"
+    sign.text = "NAVAPURA  •  CENTRAL MALL"
+    sign.font_size = 42
+    sign.outline_size = 7
+    sign.modulate = Color("#fff0c9")
+    sign.position = Vector3(0.0, 8.35, -9.9)
+    sign.pixel_size = 0.012
+    mall.add_child(sign)
+    for x in [-8.0, -4.0, 4.0, 8.0]:
+        _box_mesh(mall, Vector3(2.5, 0.10, 4.0), Vector3(x, 0.08, 13.0), mats["white"], "MallParkingBay")
+
+func _build_bank(center: Vector3) -> void:
+    var bank := Node3D.new()
+    bank.name = "NavapuraNationalBank"
+    bank.position = center
+    add_child(bank)
+    _static_box(bank, Vector3(18.0, 10.5, 15.0), Vector3(0.0, 5.25, 0.0), mats["cream"], "BankStructure")
+    _box_mesh(bank, Vector3(18.5, 0.55, 15.5), Vector3(0.0, 10.55, 0.0), mats["dark"], "BankRoofline")
+    _box_mesh(bank, Vector3(17.0, 2.1, 0.28), Vector3(0.0, 8.4, -7.65), mats["blue"], "BankSignBand")
+    var sign := Label3D.new()
+    sign.text = "NATIONAL BANK"
+    sign.font_size = 38
+    sign.outline_size = 6
+    sign.modulate = Color("#fff4d9")
+    sign.position = Vector3(0.0, 8.1, -7.9)
+    sign.pixel_size = 0.012
+    bank.add_child(sign)
+    for x in [-6.5, -3.25, 3.25, 6.5]:
+        _box_mesh(bank, Vector3(0.38, 7.0, 0.55), Vector3(x, 3.5, -7.9), mats["white"], "BankColumn")
+    _box_mesh(bank, Vector3(5.0, 3.2, 0.18), Vector3(0.0, 1.8, -7.72), mats["glass"], "BankEntrance")
+    _box_mesh(bank, Vector3(9.0, 0.22, 3.4), Vector3(0.0, 0.12, -9.4), mats["sidewalk"], "BankPortico")
+
+func _build_car_showroom(center: Vector3, showroom_name: String, accent: Color) -> void:
+    var showroom := Node3D.new()
+    showroom.name = showroom_name.replace(" ", "")
+    showroom.position = center
+    add_child(showroom)
+    _static_box(showroom, Vector3(18.0, 7.0, 15.0), Vector3(0.0, 3.5, 0.0), mats["concrete"], "ShowroomStructure")
+    var glass_material := StandardMaterial3D.new()
+    glass_material.albedo_color = Color("#6f9eae")
+    glass_material.metallic = 0.22
+    glass_material.roughness = 0.12
+    glass_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    glass_material.albedo_color.a = 0.78
+    _box_mesh(showroom, Vector3(16.8, 5.0, 0.18), Vector3(0.0, 3.35, -7.62), glass_material, "ShowroomGlassFacade")
+    var accent_material := _material(accent, 0.42)
+    _box_mesh(showroom, Vector3(18.3, 0.65, 0.5), Vector3(0.0, 6.45, -7.7), accent_material, "ShowroomSignBand")
+    var sign := Label3D.new()
+    sign.text = showroom_name
+    sign.font_size = 32
+    sign.outline_size = 6
+    sign.modulate = Color("#ffffff")
+    sign.position = Vector3(0.0, 6.3, -7.98)
+    sign.pixel_size = 0.011
+    showroom.add_child(sign)
+    for x in [-7.0, -3.5, 0.0, 3.5, 7.0]:
+        _box_mesh(showroom, Vector3(0.12, 5.2, 0.22), Vector3(x, 3.3, -7.78), mats["white"], "ShowroomMullion")
+    for x in [-5.0, 0.0, 5.0]:
+        _box_mesh(showroom, Vector3(3.2, 0.18, 5.0), Vector3(x, 0.12, 12.0), mats["sidewalk"], "ShowroomDisplayPad")
+
+func _build_office_tower(center: Vector3) -> void:
+    var tower := Node3D.new()
+    tower.name = "NavapuraBusinessTower"
+    tower.position = center
+    add_child(tower)
+    _static_box(tower, Vector3(17.0, 25.0, 15.0), Vector3(0.0, 12.5, 0.0), mats["blue"], "OfficeTowerStructure")
+    for floor_index in range(1, 7):
+        var y := float(floor_index) * 3.4
+        _box_mesh(tower, Vector3(17.2, 0.16, 15.2), Vector3(0.0, y, 0.0), mats["metal"], "TowerFloorSpandrel")
+        _box_mesh(tower, Vector3(17.05, 2.3, 0.16), Vector3(0.0, y + 1.25, -7.58), mats["glass"], "TowerGlassRibbon")
+    _box_mesh(tower, Vector3(18.0, 0.7, 16.0), Vector3(0.0, 25.4, 0.0), mats["dark"], "TowerCrown")
 
 func _build_traffic() -> void:
     var route := PackedVector3Array([
