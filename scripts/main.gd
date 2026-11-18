@@ -1942,7 +1942,7 @@ func _interact() -> void:
     if player.global_position.distance_to(Vector3(-20.0, 1.0, -31.0)) <= 7.0:
         inside_mall = true
         mall_interior.show()
-        player.global_position = Vector3(-150.0, 1.0, 10.0)
+        player.global_position = Vector3(-150.0, 1.0, 160.0)
         player.rotation.y = PI
         _show_toast("Central Mall: explore the retail units. Press INTERACT to exit.")
         return
