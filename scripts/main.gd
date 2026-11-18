@@ -30,6 +30,9 @@ var shop_tier2_visuals: Node3D
 var apartment_interior: Node3D
 var mall_interior: Node3D
 var inside_mall := false
+var showroom_interior: Node3D
+var inside_showroom := false
+var showroom_return_position := Vector3.ZERO
 var apartment_sign: Label3D
 var window_transforms: Array[Transform3D] = []
 var trim_transforms: Array[Transform3D] = []
@@ -117,6 +120,7 @@ func _ready() -> void:
     _build_city()
     _build_city_landmarks()
     _build_mall_interior()
+    _build_showroom_interior()
     _build_traffic()
     _build_pedestrians()
     _build_fuel_station()
@@ -406,6 +410,45 @@ func _build_mall_interior() -> void:
     _box_mesh(mall_interior, Vector3(8.0, 0.12, 5.0), Vector3(0.0, 0.08, 2.0), mats["white"], "MallAtriumFeature")
     _box_mesh(mall_interior, Vector3(1.8, 3.4, 1.0), Vector3(-14.0, 1.7, 11.0), mats["metal"], "MallExitDoor")
     mall_interior.hide()
+
+func _build_showroom_interior() -> void:
+    showroom_interior = Node3D.new()
+    showroom_interior.name = "NavapuraMotorsInterior"
+    showroom_interior.position = Vector3(150.0, 0.0, -150.0)
+    add_child(showroom_interior)
+    _static_box(showroom_interior, Vector3(32.0, 0.35, 24.0), Vector3(0.0, -0.18, 0.0), mats["concrete"], "ShowroomInteriorFloor")
+    _static_box(showroom_interior, Vector3(32.0, 6.5, 0.4), Vector3(0.0, 3.25, -12.0), mats["cream"], "ShowroomInteriorRearWall")
+    _static_box(showroom_interior, Vector3(0.4, 6.5, 24.0), Vector3(-16.0, 3.25, 0.0), mats["cream"], "ShowroomInteriorLeftWall")
+    _static_box(showroom_interior, Vector3(0.4, 6.5, 24.0), Vector3(16.0, 3.25, 0.0), mats["cream"], "ShowroomInteriorRightWall")
+    _box_mesh(showroom_interior, Vector3(31.5, 0.3, 23.5), Vector3(0.0, 6.55, 0.0), mats["dark"], "ShowroomInteriorCeiling")
+    var display_materials: Array[Material] = [mats["blue"], mats["red"]]
+    for display_index in range(2):
+        var x := -8.0 + float(display_index) * 16.0
+        _box_mesh(showroom_interior, Vector3(9.0, 0.22, 6.0), Vector3(x, 0.12, -1.0), display_materials[display_index], "VehicleDisplayPlatform")
+        _box_mesh(showroom_interior, Vector3(5.0, 0.65, 2.0), Vector3(x, 1.05, -1.0), mats["car"], "DisplayCarBody")
+        _box_mesh(showroom_interior, Vector3(2.7, 0.72, 1.8), Vector3(x, 1.65, -1.0), mats["glass"], "DisplayCarCabin")
+        for wheel_x in [-1.55, 1.55]:
+            for wheel_z in [-1.0, 1.0]:
+                var wheel := MeshInstance3D.new()
+                var wheel_mesh := CylinderMesh.new()
+                wheel_mesh.top_radius = 0.42
+                wheel_mesh.bottom_radius = 0.42
+                wheel_mesh.height = 0.22
+                wheel.mesh = wheel_mesh
+                wheel.position = Vector3(x + wheel_x, 0.62, -1.0 + wheel_z)
+                wheel.rotation_degrees.z = 90.0
+                wheel.material_override = mats["dark"]
+                showroom_interior.add_child(wheel)
+    var gallery_sign := Label3D.new()
+    gallery_sign.name = "ShowroomInteriorSign"
+    gallery_sign.text = "NAVAPURA MOTOR GALLERY"
+    gallery_sign.font_size = 36
+    gallery_sign.outline_size = 6
+    gallery_sign.modulate = Color("#fff0c9")
+    gallery_sign.position = Vector3(0.0, 5.5, -11.55)
+    gallery_sign.pixel_size = 0.012
+    showroom_interior.add_child(gallery_sign)
+    showroom_interior.hide()
 
 func _build_bank(center: Vector3) -> void:
     var bank := Node3D.new()
@@ -1771,10 +1814,14 @@ func _drive_car(delta: float) -> void:
 
 func _update_camera(delta: float) -> void:
     var focus := active_vehicle.global_position if driving and is_instance_valid(active_vehicle) else player.global_position
-    var inside_building := GameState.inside_home or GameState.inside_shop or GameState.inside_apartment or inside_mall
+    var inside_building := GameState.inside_home or GameState.inside_shop or GameState.inside_apartment or inside_mall or inside_showroom
     var offset := Vector3(0.0, 2.35 if inside_building else 5.0, camera_distance).rotated(Vector3.UP, camera_yaw)
     var desired := focus + offset
-    if inside_mall:
+    if inside_showroom:
+        desired.x = clampf(desired.x, 134.0, 166.0)
+        desired.y = clampf(desired.y, 0.8, 5.8)
+        desired.z = clampf(desired.z, -166.0, -134.0)
+    elif inside_mall:
         desired.x = clampf(desired.x, -166.0, -134.0)
         desired.y = clampf(desired.y, 0.8, 6.0)
         desired.z = clampf(desired.z, 136.0, 164.0)
@@ -1912,6 +1959,12 @@ func _cancel_job() -> void:
     _refresh_ui()
 
 func _interact() -> void:
+    if inside_showroom:
+        inside_showroom = false
+        showroom_interior.hide()
+        player.global_position = showroom_return_position
+        _show_toast("You exited the vehicle gallery.")
+        return
     if inside_mall:
         inside_mall = false
         mall_interior.hide()
@@ -1950,11 +2003,15 @@ func _interact() -> void:
         _toggle_bank()
         _show_toast("National Bank: manage your wallet, savings and loans.")
         return
-    if player.global_position.distance_to(Vector3(-20.0, 1.0, 29.0)) <= 7.0:
-        _show_toast("Navapura Motors: showroom open. Vehicle purchasing is coming next.")
-        return
-    if player.global_position.distance_to(Vector3(20.0, 1.0, 29.0)) <= 7.0:
-        _show_toast("City Auto Gallery: inspect the showroom. Vehicle purchasing is coming next.")
+    if player.global_position.distance_to(Vector3(-20.0, 1.0, 29.0)) <= 7.0 or player.global_position.distance_to(Vector3(20.0, 1.0, 29.0)) <= 7.0:
+        inside_showroom = true
+        showroom_return_position = player.global_position
+        showroom_interior.show()
+        player.global_position = Vector3(150.0, 1.0, -158.0)
+        player.rotation.y = PI
+        camera_yaw = 0.0
+        camera_distance = 8.0
+        _show_toast("Vehicle gallery: inspect the display cars. Press INTERACT to exit.")
         return
     if player.global_position.distance_to(Vector3(60.0, 1.0, -29.0)) <= 8.0:
         _show_toast("Navapura Business Tower: commercial offices and property district.")
