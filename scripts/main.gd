@@ -36,6 +36,9 @@ var showroom_return_position := Vector3.ZERO
 var office_interior: Node3D
 var inside_office := false
 var office_return_position := Vector3.ZERO
+var public_store_interior: Node3D
+var inside_public_store := false
+var public_store_return_position := Vector3.ZERO
 var apartment_sign: Label3D
 var window_transforms: Array[Transform3D] = []
 var trim_transforms: Array[Transform3D] = []
@@ -125,6 +128,7 @@ func _ready() -> void:
     _build_mall_interior()
     _build_showroom_interior()
     _build_office_interior()
+    _build_public_store_interior()
     _build_traffic()
     _build_pedestrians()
     _build_fuel_station()
@@ -496,6 +500,36 @@ func _build_office_interior() -> void:
     office_sign.pixel_size = 0.012
     office_interior.add_child(office_sign)
     office_interior.hide()
+
+func _build_public_store_interior() -> void:
+    public_store_interior = Node3D.new()
+    public_store_interior.name = "NavapuraMarketInterior"
+    public_store_interior.position = Vector3(-180.0, 0.0, -150.0)
+    add_child(public_store_interior)
+    _static_box(public_store_interior, Vector3(22.0, 0.3, 18.0), Vector3(0.0, -0.15, 0.0), mats["concrete"], "MarketFloor")
+    _static_box(public_store_interior, Vector3(22.0, 4.5, 0.35), Vector3(0.0, 2.25, -9.0), mats["cream"], "MarketRearWall")
+    _static_box(public_store_interior, Vector3(0.35, 4.5, 18.0), Vector3(-11.0, 2.25, 0.0), mats["cream"], "MarketLeftWall")
+    _static_box(public_store_interior, Vector3(0.35, 4.5, 18.0), Vector3(11.0, 2.25, 0.0), mats["cream"], "MarketRightWall")
+    _box_mesh(public_store_interior, Vector3(21.5, 0.25, 17.5), Vector3(0.0, 4.6, 0.0), mats["dark"], "MarketCeiling")
+    for shelf_x in [-7.0, -2.5, 2.5, 7.0]:
+        _box_mesh(public_store_interior, Vector3(1.35, 2.4, 5.8), Vector3(shelf_x, 1.2, -1.0), mats["metal"], "MarketShelf")
+        for level in range(3):
+            for side in [-1.0, 1.0]:
+                var product_mat: Material = mats["yellow"] if (level + int(side)) % 2 == 0 else mats["green"]
+                _box_mesh(public_store_interior, Vector3(0.52, 0.42, 0.72), Vector3(shelf_x + side * 0.72, 0.55 + float(level) * 0.72, -2.5 + float(level % 2) * 2.0), product_mat, "MarketProduct")
+    _box_mesh(public_store_interior, Vector3(6.0, 0.95, 1.1), Vector3(0.0, 0.72, 6.0), mats["brick"], "MarketCheckoutCounter")
+    _box_mesh(public_store_interior, Vector3(0.65, 0.42, 0.5), Vector3(-1.8, 1.42, 6.0), mats["dark"], "MarketCashRegister")
+    _box_mesh(public_store_interior, Vector3(2.2, 1.9, 1.5), Vector3(8.5, 0.95, 6.0), mats["blue"], "MarketDrinksFridge")
+    var market_sign := Label3D.new()
+    market_sign.name = "MarketInteriorSign"
+    market_sign.text = "NAVAPURA DAILY MARKET"
+    market_sign.font_size = 30
+    market_sign.outline_size = 6
+    market_sign.modulate = Color("#fff0c9")
+    market_sign.position = Vector3(0.0, 3.6, -8.55)
+    market_sign.pixel_size = 0.011
+    public_store_interior.add_child(market_sign)
+    public_store_interior.hide()
 
 func _build_bank(center: Vector3) -> void:
     var bank := Node3D.new()
@@ -1922,10 +1956,14 @@ func _drive_car(delta: float) -> void:
 
 func _update_camera(delta: float) -> void:
     var focus := active_vehicle.global_position if driving and is_instance_valid(active_vehicle) else player.global_position
-    var inside_building := GameState.inside_home or GameState.inside_shop or GameState.inside_apartment or inside_mall or inside_showroom or inside_office
+    var inside_building := GameState.inside_home or GameState.inside_shop or GameState.inside_apartment or inside_mall or inside_showroom or inside_office or inside_public_store
     var offset := Vector3(0.0, 2.35 if inside_building else 5.0, camera_distance).rotated(Vector3.UP, camera_yaw)
     var desired := focus + offset
-    if inside_office:
+    if inside_public_store:
+        desired.x = clampf(desired.x, -196.0, -164.0)
+        desired.y = clampf(desired.y, 0.8, 4.2)
+        desired.z = clampf(desired.z, -166.0, -134.0)
+    elif inside_office:
         desired.x = clampf(desired.x, 166.0, 194.0)
         desired.y = clampf(desired.y, 0.8, 5.0)
         desired.z = clampf(desired.z, -166.0, -134.0)
@@ -2071,6 +2109,12 @@ func _cancel_job() -> void:
     _refresh_ui()
 
 func _interact() -> void:
+    if inside_public_store:
+        inside_public_store = false
+        public_store_interior.hide()
+        player.global_position = public_store_return_position
+        _show_toast("You exited Navapura Daily Market.")
+        return
     if inside_office:
         inside_office = false
         office_interior.hide()
@@ -2130,6 +2174,16 @@ func _interact() -> void:
         camera_yaw = 0.0
         camera_distance = 8.0
         _show_toast("Vehicle gallery: inspect the display cars. Press INTERACT to exit.")
+        return
+    if player.global_position.distance_to(Vector3(-60.0, 1.0, -67.0)) <= 7.0:
+        inside_public_store = true
+        public_store_return_position = player.global_position
+        public_store_interior.show()
+        player.global_position = Vector3(-180.0, 1.0, -157.0)
+        player.rotation.y = PI
+        camera_yaw = 0.0
+        camera_distance = 6.5
+        _show_toast("Daily Market: browse shelves and checkout. Use PHONE to buy a meal. Press INTERACT to exit.")
         return
     if player.global_position.distance_to(Vector3(60.0, 1.0, -29.0)) <= 8.0:
         inside_office = true
