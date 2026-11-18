@@ -104,15 +104,89 @@ var left_pad: PanelContainer
 var right_pad: PanelContainer
 
 func _ready() -> void:
-    # City showcase mode: render Navapura only. No player, vehicles, pedestrians,
-    # missions, HUD, economy interactions, or gameplay actors are instantiated.
+    # Playable city build: restore exploration, touch controls, persistence and
+    # existing property systems while retaining the new Navapura landmarks.
     Engine.max_fps = 60
     get_viewport().scaling_3d_scale = 0.78
+    GameState.state_changed.connect(_refresh_ui)
+    GameState.toast_requested.connect(_show_toast)
     _create_materials()
     _build_environment()
     _build_city()
     _build_city_landmarks()
-    _build_city_showcase_camera()
+    _build_traffic()
+    _build_pedestrians()
+    _build_fuel_station()
+    _build_home_property()
+    _build_shop_interior()
+    _build_apartment_property()
+    _build_player()
+    _build_car()
+    if GameState.bike_owned:
+        _build_bike()
+    _build_job_markers()
+    job_stage = GameState.active_job_stage
+    job_title = GameState.active_job_title
+    job_reward_active = GameState.active_job_reward
+    if job_stage > 0:
+        pickup_marker.global_position = GameState.active_job_pickup_position
+        drop_marker.global_position = GameState.active_job_destination_position
+        pickup_marker.visible = job_stage == 1
+        drop_marker.visible = job_stage == 2
+    _build_hud()
+    car.global_position = GameState.car_position
+    car.rotation.y = GameState.car_rotation_y
+    if is_instance_valid(bike):
+        bike.global_position = GameState.bike_position
+        bike.rotation.y = GameState.bike_rotation_y
+    player.global_position = GameState.player_position
+    if player.global_position.y < 0.8:
+        player.global_position.y = 1.0
+    if GameState.inside_home and GameState.home_owned:
+        GameState.inside_shop = false
+        GameState.inside_apartment = false
+        home_interior.show()
+        shop_interior.hide()
+        apartment_interior.hide()
+        GameState.was_driving = false
+        camera_distance = 5.5
+    elif GameState.inside_shop and GameState.shop_owned:
+        GameState.inside_home = false
+        GameState.inside_apartment = false
+        home_interior.hide()
+        shop_interior.show()
+        apartment_interior.hide()
+        GameState.was_driving = false
+        camera_distance = 5.5
+    elif GameState.inside_apartment and GameState.apartment_owned:
+        GameState.inside_home = false
+        GameState.inside_shop = false
+        home_interior.hide()
+        shop_interior.hide()
+        apartment_interior.show()
+        GameState.was_driving = false
+        camera_distance = 5.5
+    else:
+        GameState.inside_home = false
+        GameState.inside_shop = false
+        GameState.inside_apartment = false
+        home_interior.hide()
+        shop_interior.hide()
+        apartment_interior.hide()
+    if GameState.was_driving:
+        active_vehicle_kind = GameState.active_vehicle_kind
+        if active_vehicle_kind == "motorbike" and is_instance_valid(bike):
+            active_vehicle = bike
+        else:
+            active_vehicle_kind = "car"
+            active_vehicle = car
+        driving = true
+        player.global_position = active_vehicle.global_position + Vector3(0.0, 0.1, 0.0)
+        player.hide()
+        player.collision_layer = 0
+        player.collision_mask = 0
+    _refresh_ui()
+    _show_toast("Welcome to Navapura. Explore the city and enter its buildings.")
 
 func _build_city_showcase_camera() -> void:
     var showcase_camera := Camera3D.new()
