@@ -37,6 +37,8 @@ var balcony_rail_transforms: Array[Transform3D] = []
 var balcony_bar_transforms: Array[Transform3D] = []
 var ac_unit_transforms: Array[Transform3D] = []
 var roof_parapet_transforms: Array[Transform3D] = []
+var tree_trunk_transforms: Array[Transform3D] = []
+var tree_crown_transforms: Array[Transform3D] = []
 var lane_transforms: Array[Transform3D] = []
 var crosswalk_transforms: Array[Transform3D] = []
 var player: CharacterBody3D
@@ -328,6 +330,7 @@ func _build_city() -> void:
     ]:
         _build_tree(p)
 
+    _build_tree_batches()
     _build_window_batch()
     _build_road_markings()
     _build_street_sign(Vector3(0.0, 0.0, -3.0), "NAVAPURA")
@@ -915,24 +918,22 @@ func _build_street_lights() -> void:
             lamp.material_override = glow
 
 func _build_tree(position: Vector3) -> void:
-    var trunk := MeshInstance3D.new()
+    # Store repeated tree geometry as transforms and submit it in two GPU batches.
+    # This avoids creating separate scene nodes for every trunk and crown.
+    tree_trunk_transforms.append(Transform3D(Basis.IDENTITY, position + Vector3(0.0, 1.4, 0.0)))
+    tree_crown_transforms.append(Transform3D(Basis.IDENTITY, position + Vector3(0.0, 3.25, 0.0)))
+
+func _build_tree_batches() -> void:
     var trunk_mesh := CylinderMesh.new()
     trunk_mesh.top_radius = 0.18
     trunk_mesh.bottom_radius = 0.28
     trunk_mesh.height = 2.8
-    trunk.mesh = trunk_mesh
-    trunk.position = position + Vector3(0.0, 1.4, 0.0)
-    trunk.material_override = mats["brick"]
-    add_child(trunk)
+    _create_multimesh_batch(trunk_mesh, mats["brick"], tree_trunk_transforms, "InstancedTreeTrunks")
 
-    var crown := MeshInstance3D.new()
     var crown_mesh := SphereMesh.new()
     crown_mesh.radius = 1.45
     crown_mesh.height = 2.9
-    crown.mesh = crown_mesh
-    crown.position = position + Vector3(0.0, 3.25, 0.0)
-    crown.material_override = mats["green"]
-    add_child(crown)
+    _create_multimesh_batch(crown_mesh, mats["green"], tree_crown_transforms, "InstancedTreeCrowns")
 
 func _build_street_sign(position: Vector3, label_text: String) -> void:
     var pole := MeshInstance3D.new()
