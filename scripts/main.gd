@@ -118,7 +118,8 @@ func _ready() -> void:
     # Playable city build: restore exploration, touch controls, persistence and
     # existing property systems while retaining the new Navapura landmarks.
     Engine.max_fps = 60
-    get_viewport().scaling_3d_scale = 0.78
+    # Mobile-first balanced profile: render fewer pixels, retain full-resolution UI.
+    get_viewport().scaling_3d_scale = 0.58
     GameState.state_changed.connect(_refresh_ui)
     GameState.toast_requested.connect(_show_toast)
     _create_materials()
@@ -209,7 +210,7 @@ func _build_city_showcase_camera() -> void:
     showcase_camera.position = Vector3(0.0, 118.0, 156.0)
     showcase_camera.fov = 58.0
     showcase_camera.near = 0.1
-    showcase_camera.far = 420.0
+    showcase_camera.far = 190.0
     add_child(showcase_camera)
     showcase_camera.look_at(Vector3(0.0, 0.0, 0.0), Vector3.UP)
 
@@ -255,6 +256,8 @@ func _box_mesh(parent: Node3D, size: Vector3, position: Vector3, material: Mater
     instance.mesh = box
     instance.position = position
     instance.material_override = material
+    instance.visibility_range_end = 145.0
+    instance.visibility_range_end_margin = 12.0
     parent.add_child(instance)
     return instance
 
@@ -612,7 +615,7 @@ func _build_traffic() -> void:
         Vector3(-80.0, 0.55, -40.0)
     ])
     var colors: Array[Color] = [Color("#b94c3d"), Color("#d1a33f"), Color("#e5e2d8")]
-    for i in range(3):
+    for i in range(2):
         var traffic_car := Node3D.new()
         traffic_car.set_script(TRAFFIC_SCRIPT)
         traffic_car.set("route", route)
@@ -629,7 +632,7 @@ func _build_pedestrians() -> void:
         PackedVector3Array([Vector3(30.0, 0.9, 32.0), Vector3(-30.0, 0.9, 32.0), Vector3(-30.0, 0.9, 48.0), Vector3(30.0, 0.9, 48.0)])
     ]
     var clothes: Array[Color] = [Color("#315e83"), Color("#9b5a43"), Color("#4f7550"), Color("#80628c")]
-    for i in range(routes.size()):
+    for i in range(2):
         var pedestrian := Node3D.new()
         pedestrian.set_script(PEDESTRIAN_SCRIPT)
         pedestrian.set("route", routes[i])
@@ -1148,6 +1151,8 @@ func _create_multimesh_batch(mesh: Mesh, material: Material, transforms: Array[T
     instance.name = node_name
     instance.multimesh = mm
     instance.material_override = material
+    instance.visibility_range_end = 145.0
+    instance.visibility_range_end_margin = 12.0
     add_child(instance)
 
 func _build_window_batch() -> void:
@@ -1310,7 +1315,7 @@ func _build_player() -> void:
     camera.current = true
     camera.fov = 65.0
     camera.near = 0.1
-    camera.far = 190.0
+    camera.far = 150.0
     add_child(camera)
     camera.look_at(player.global_position + Vector3(0.0, 1.0, 0.0), Vector3.UP)
 
@@ -1835,14 +1840,14 @@ func _update_performance(delta: float) -> void:
     if fps < 40:
         low_fps_samples += 1
         high_fps_samples = 0
-        if low_fps_samples >= 2 and viewport.scaling_3d_scale > 0.65:
-            viewport.scaling_3d_scale = maxf(0.65, viewport.scaling_3d_scale - 0.05)
+        if low_fps_samples >= 2 and viewport.scaling_3d_scale > 0.42:
+            viewport.scaling_3d_scale = maxf(0.42, viewport.scaling_3d_scale - 0.06)
             low_fps_samples = 0
-    elif fps > 54:
+    elif fps > 48:
         high_fps_samples += 1
         low_fps_samples = 0
-        if high_fps_samples >= 6 and viewport.scaling_3d_scale < 0.82:
-            viewport.scaling_3d_scale = minf(0.82, viewport.scaling_3d_scale + 0.03)
+        if high_fps_samples >= 8 and viewport.scaling_3d_scale < 0.68:
+            viewport.scaling_3d_scale = minf(0.68, viewport.scaling_3d_scale + 0.02)
             high_fps_samples = 0
     else:
         low_fps_samples = 0
