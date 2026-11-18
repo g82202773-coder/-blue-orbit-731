@@ -2372,6 +2372,16 @@ func _next_day() -> void:
 
 func _sync_save_state() -> void:
     if is_instance_valid(player):
+        # The lightweight public interiors are scene-local cells, not persistent
+        # homes. Save their exterior doorway so a reload always returns outdoors.
+        if inside_mall:
+            player.global_position = Vector3(-20.0, 1.0, -31.0)
+        elif inside_showroom:
+            player.global_position = showroom_return_position
+        elif inside_office:
+            player.global_position = office_return_position
+        elif inside_public_store:
+            player.global_position = public_store_return_position
         GameState.set_player_position(player.global_position)
     if driving and is_instance_valid(active_vehicle):
         GameState.set_vehicle_state(active_vehicle_kind, active_vehicle.global_position, active_vehicle.rotation.y, true)
@@ -2401,7 +2411,7 @@ func _refresh_ui() -> void:
     _update_fuel_hud()
     if is_instance_valid(map_panel) and map_panel.visible:
         _update_minimap()
-    var travel_state := "HOME INTERIOR" if GameState.inside_home else ("APARTMENT INTERIOR" if GameState.inside_apartment else ("SHOP INTERIOR" if GameState.inside_shop else ("DRIVING %s" % active_vehicle_kind.to_upper() if driving else "ON FOOT")))
+    var travel_state := "HOME INTERIOR" if GameState.inside_home else ("APARTMENT INTERIOR" if GameState.inside_apartment else ("SHOP INTERIOR" if GameState.inside_shop else ("MALL INTERIOR" if inside_mall else ("SHOWROOM" if inside_showroom else ("BUSINESS LOBBY" if inside_office else ("MARKET INTERIOR" if inside_public_store else ("DRIVING %s" % active_vehicle_kind.to_upper() if driving else "ON FOOT")))))))
     location_label.text = "%s  •  NET WORTH ₹%d" % [travel_state, GameState.net_worth()]
     if is_instance_valid(home_sign):
         home_sign.text = "YOUR STARTER HOME" if GameState.home_owned else "STARTER HOME • ₹3,000"
