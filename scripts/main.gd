@@ -215,37 +215,63 @@ func _build_city_showcase_camera() -> void:
     showcase_camera.look_at(Vector3(0.0, 0.0, 0.0), Vector3.UP)
 
 func _create_materials() -> void:
+    # Physically based materials: higher-frequency surface response and less
+    # saturated colours help the mobile renderer read as a real city.
     mats = {
-        "asphalt": _material(Color("#292f35"), 0.94),
-        "road_line": _material(Color("#e8d7a0"), 0.78),
-        "sidewalk": _material(Color("#aaa9a3"), 0.88),
-        "grass": _material(Color("#657c55"), 1.0),
-        "concrete": _material(Color("#b8b1a2"), 0.95),
-        "cream": _material(Color("#c9c3b5"), 0.88),
-        "blue": _material(Color("#718b99"), 0.78),
-        "brick": _material(Color("#956c58"), 0.95),
-        "glass": _material(Color("#315b70"), 0.18),
-        "metal": _material(Color("#59636a"), 0.58),
-        "balcony": _material(Color("#d7d3c9"), 0.72),
-        "ac": _material(Color("#d9dedf"), 0.76),
-        "dark": _material(Color("#282d31"), 0.9),
-        "green": _material(Color("#557d50"), 1.0),
-        "skin": _material(Color("#b9825e"), 0.8),
-        "player": _material(Color("#315e83"), 0.78),
-        "car": _material(Color("#176fa8"), 0.24),
-        "yellow": _material(Color("#e6b94e"), 0.55),
-        "white": _material(Color("#e9e5db"), 0.65),
-        "red": _material(Color("#a8493e"), 0.8)
+        "asphalt": _material(Color("#34383b"), 0.96),
+        "road_line": _material(Color("#d8cfad"), 0.82),
+        "sidewalk": _material(Color("#858783"), 0.92),
+        "grass": _material(Color("#4d6044"), 1.0),
+        "concrete": _material(Color("#9b9992"), 0.94),
+        "cream": _material(Color("#aaa69d"), 0.88),
+        "blue": _material(Color("#647681"), 0.76),
+        "brick": _material(Color("#76594b"), 0.93),
+        "glass": _make_glass_material(),
+        "metal": _material(Color("#42494e"), 0.42),
+        "balcony": _material(Color("#b8b8b1"), 0.68),
+        "ac": _material(Color("#b8c0c1"), 0.74),
+        "dark": _material(Color("#202528"), 0.78),
+        "green": _material(Color("#486044"), 1.0),
+        "skin": _material(Color("#a87556"), 0.82),
+        "player": _material(Color("#34556d"), 0.8),
+        "car": _make_car_paint(Color("#176fa8")),
+        "yellow": _material(Color("#c7a75d"), 0.52),
+        "white": _material(Color("#d0cec6"), 0.68),
+        "red": _material(Color("#91483f"), 0.78),
+        "facade_light": _material(Color("#aaa69d"), 0.88),
+        "facade_sand": _material(Color("#9b8e7c"), 0.9),
+        "facade_dark": _material(Color("#62696b"), 0.84),
+        "facade_stone": _material(Color("#8d918e"), 0.94),
+        "window_frame": _material(Color("#30383c"), 0.48),
+        "roof_gravel": _material(Color("#696b68"), 0.98)
     }
 
 func _material(color: Color, rough: float) -> StandardMaterial3D:
     var result := StandardMaterial3D.new()
     result.albedo_color = color
     result.roughness = rough
-    if color == Color("#315b70"):
-        result.metallic = 0.28
-    elif color == Color("#176fa8"):
-        result.metallic = 0.22
+    result.metallic = 0.0
+    result.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+    return result
+
+func _make_glass_material() -> StandardMaterial3D:
+    var result := StandardMaterial3D.new()
+    result.albedo_color = Color(0.18, 0.30, 0.36, 0.48)
+    result.metallic = 0.48
+    result.roughness = 0.12
+    result.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    result.cull_mode = BaseMaterial3D.CULL_DISABLED
+    result.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+    return result
+
+func _make_car_paint(color: Color) -> StandardMaterial3D:
+    var result := StandardMaterial3D.new()
+    result.albedo_color = color
+    result.metallic = 0.42
+    result.roughness = 0.22
+    result.clearcoat_enabled = true
+    result.clearcoat = 0.72
+    result.clearcoat_roughness = 0.18
     return result
 
 func _box_mesh(parent: Node3D, size: Vector3, position: Vector3, material: Material, node_name := "Mesh") -> MeshInstance3D:
@@ -282,11 +308,11 @@ func _build_environment() -> void:
     var sky := Sky.new()
     sky.sky_material = ProceduralSkyMaterial.new()
     environment.sky = sky
-    environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-    environment.ambient_light_color = Color(0.72, 0.76, 0.82)
-    environment.ambient_light_energy = 0.82
-    environment.ambient_light_color = Color("#c5d0d8")
+    environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+    environment.ambient_light_energy = 0.72
+    environment.reflected_light_source = Environment.REFLECTION_SOURCE_BG
     environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+    environment.tonemap_exposure = 1.0
     procedural_sky = sky.sky_material as ProceduralSkyMaterial
     procedural_sky.sky_top_color = Color("#5e8fb8")
     procedural_sky.sky_horizon_color = Color("#c7d7df")
@@ -297,11 +323,13 @@ func _build_environment() -> void:
 
     sun_light = DirectionalLight3D.new()
     sun_light.rotation_degrees = Vector3(-48.0, -32.0, 0.0)
-    sun_light.light_energy = 1.15
+    sun_light.light_energy = 1.05
     # Real-time shadow maps are disproportionately expensive on entry-level phones.
     # Ambient/fill lighting keeps the scene readable without them.
-    sun_light.shadow_enabled = false
-    sun_light.directional_shadow_max_distance = 55.0
+    sun_light.shadow_enabled = true
+    sun_light.shadow_bias = 0.06
+    sun_light.shadow_normal_bias = 1.2
+    sun_light.directional_shadow_max_distance = 48.0
     sun_light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
     add_child(sun_light)
     _update_day_night()
@@ -340,7 +368,7 @@ func _build_city() -> void:
                 var center: float = (float(interval[0]) + float(interval[1])) * 0.5
                 _box_mesh(self, Vector3(1.8, 0.14, length), Vector3(road_x + side * 6.9, 0.055, center), mats["sidewalk"], "BlockSidewalk")
 
-    var palettes: Array[Material] = [mats["cream"], mats["blue"], mats["brick"], mats["concrete"]]
+    var palettes: Array[Material] = [mats["facade_light"], mats["facade_sand"], mats["facade_dark"], mats["facade_stone"]]
     var index := 0
     for x in [-60.0, -20.0, 20.0, 60.0]:
         for z in [-60.0, -20.0, 20.0, 60.0]:
@@ -1089,7 +1117,14 @@ func _build_building(center: Vector3, size: Vector3, facade: Material, index: in
     shape_node.shape = shape
     body.add_child(shape_node)
     _box_mesh(body, size, Vector3.ZERO, facade, "BuildingFacade")
-    _box_mesh(body, Vector3(size.x + 0.35, 0.35, size.z + 0.35), Vector3(0.0, size.y * 0.5 + 0.18, 0.0), mats["dark"], "Roof")
+    # Real building massing: recessed plinth, floor slab bands and roof coping.
+    _box_mesh(body, Vector3(size.x + 0.18, 0.42, size.z + 0.18), Vector3(0.0, -size.y * 0.5 + 0.22, 0.0), mats["facade_dark"], "GroundFloorPlinth")
+    _box_mesh(body, Vector3(size.x + 0.24, 0.22, size.z + 0.24), Vector3(0.0, size.y * 0.5 - 0.14, 0.0), mats["facade_light"], "RoofCoping")
+    _box_mesh(body, Vector3(size.x + 0.35, 0.35, size.z + 0.35), Vector3(0.0, size.y * 0.5 + 0.18, 0.0), mats["roof_gravel"], "Roof")
+    # Vertical corner pilasters add depth and catch sunlight at grazing angles.
+    for corner_x in [-1.0, 1.0]:
+        for corner_z in [-1.0, 1.0]:
+            _box_mesh(body, Vector3(0.20, size.y, 0.22), Vector3(corner_x * (size.x * 0.5 - 0.12), 0.0, corner_z * (size.z * 0.5 - 0.12)), mats["facade_light"], "FacadeCornerPilaster")
     var parapet_y := size.y * 0.5 + 0.42
     roof_parapet_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(0.0, parapet_y, -size.z * 0.5)))
     roof_parapet_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(0.0, parapet_y, size.z * 0.5)))
@@ -1157,13 +1192,13 @@ func _create_multimesh_batch(mesh: Mesh, material: Material, transforms: Array[T
 
 func _build_window_batch() -> void:
     var window_mesh := BoxMesh.new()
-    window_mesh.size = Vector3(1.5, 1.05, 0.10)
+    window_mesh.size = Vector3(1.5, 1.05, 0.055)
     _create_multimesh_batch(window_mesh, mats["glass"], window_transforms, "InstancedCityWindows")
     var trim_mesh := BoxMesh.new()
     trim_mesh.size = Vector3(11.5, 0.13, 0.18)
     _create_multimesh_batch(trim_mesh, mats["white"], trim_transforms, "InstancedFacadeTrims")
     var frame_mesh := BoxMesh.new()
-    frame_mesh.size = Vector3(0.09, 0.09, 0.13)
+    frame_mesh.size = Vector3(0.075, 0.075, 0.11)
     _create_multimesh_batch(frame_mesh, mats["white"], facade_frame_transforms, "InstancedWindowFrames")
     var balcony_slab := BoxMesh.new()
     balcony_slab.size = Vector3(1.95, 0.12, 0.62)
