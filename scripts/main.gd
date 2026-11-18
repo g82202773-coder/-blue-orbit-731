@@ -218,11 +218,11 @@ func _create_materials() -> void:
     # Physically based materials: higher-frequency surface response and less
     # saturated colours help the mobile renderer read as a real city.
     mats = {
-        "asphalt": _material(Color("#34383b"), 0.96),
+        "asphalt": _make_weathered_material(Color("#34383b"), 0.96, 3.8),
         "road_line": _material(Color("#d8cfad"), 0.82),
-        "sidewalk": _material(Color("#858783"), 0.92),
+        "sidewalk": _make_weathered_material(Color("#858783"), 0.92, 2.4),
         "grass": _material(Color("#4d6044"), 1.0),
-        "concrete": _material(Color("#9b9992"), 0.94),
+        "concrete": _make_weathered_material(Color("#9b9992"), 0.94, 2.0),
         "cream": _material(Color("#aaa69d"), 0.88),
         "blue": _material(Color("#647681"), 0.76),
         "brick": _material(Color("#76594b"), 0.93),
@@ -238,10 +238,10 @@ func _create_materials() -> void:
         "yellow": _material(Color("#c7a75d"), 0.52),
         "white": _material(Color("#d0cec6"), 0.68),
         "red": _material(Color("#91483f"), 0.78),
-        "facade_light": _material(Color("#aaa69d"), 0.88),
-        "facade_sand": _material(Color("#9b8e7c"), 0.9),
-        "facade_dark": _material(Color("#62696b"), 0.84),
-        "facade_stone": _material(Color("#8d918e"), 0.94),
+        "facade_light": _make_weathered_material(Color("#aaa69d"), 0.88, 1.6),
+        "facade_sand": _make_weathered_material(Color("#9b8e7c"), 0.9, 1.6),
+        "facade_dark": _make_weathered_material(Color("#62696b"), 0.84, 1.6),
+        "facade_stone": _make_weathered_material(Color("#8d918e"), 0.94, 1.6),
         "window_frame": _material(Color("#30383c"), 0.48),
         "roof_gravel": _material(Color("#696b68"), 0.98)
     }
@@ -252,6 +252,42 @@ func _material(color: Color, rough: float) -> StandardMaterial3D:
     result.roughness = rough
     result.metallic = 0.0
     result.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+    return result
+
+func _make_weathered_material(base_color: Color, roughness: float, grain_scale: float) -> ShaderMaterial:
+    # Lightweight world-space procedural grain: subtle concrete/asphalt variation
+    # without shipping large texture files or adding extra draw calls.
+    var shader := Shader.new()
+    shader.code = """
+shader_type spatial;
+render_mode diffuse_burley, specular_schlick_ggx;
+uniform vec4 base_tint : source_color = vec4(0.5, 0.5, 0.5, 1.0);
+uniform float surface_roughness : hint_range(0.0, 1.0) = 0.9;
+uniform float grain_scale = 2.0;
+varying vec3 world_position;
+float hash31(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
+}
+void vertex() {
+    world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
+void fragment() {
+    vec3 cell = floor(world_position * grain_scale);
+    float broad = hash31(cell);
+    float fine = hash31(floor(world_position * grain_scale * 7.0));
+    float variation = 0.955 + broad * 0.065 + fine * 0.018;
+    ALBEDO = base_tint.rgb * variation;
+    ROUGHNESS = surface_roughness;
+    METALLIC = 0.0;
+}
+"""
+    var result := ShaderMaterial.new()
+    result.shader = shader
+    result.set_shader_parameter("base_tint", base_color)
+    result.set_shader_parameter("surface_roughness", roughness)
+    result.set_shader_parameter("grain_scale", grain_scale)
     return result
 
 func _make_glass_material() -> StandardMaterial3D:
@@ -1326,14 +1362,25 @@ func _build_player() -> void:
         arm.rotation.z = side * -0.12
         player_arms.append(arm)
 
+    var neck := MeshInstance3D.new()
+    var neck_mesh := CylinderMesh.new()
+    neck_mesh.top_radius = 0.09
+    neck_mesh.bottom_radius = 0.11
+    neck_mesh.height = 0.18
+    neck.mesh = neck_mesh
+    neck.position = Vector3(0.0, 0.79, 0.0)
+    neck.material_override = mats["skin"]
+    player.add_child(neck)
     var head := MeshInstance3D.new()
     var head_mesh := SphereMesh.new()
-    head_mesh.radius = 0.205
-    head_mesh.height = 0.41
+    head_mesh.radius = 0.19
+    head_mesh.height = 0.38
     head.mesh = head_mesh
-    head.position = Vector3(0.0, 0.93, 0.0)
+    head.position = Vector3(0.0, 0.99, 0.0)
     head.material_override = mats["skin"]
     player.add_child(head)
+    var face := _box_mesh(player, Vector3(0.20, 0.12, 0.035), Vector3(0.0, 0.96, -0.17), mats["skin"], "Face")
+    face.rotation.x = -0.08
     var hair := MeshInstance3D.new()
     var hair_mesh := SphereMesh.new()
     hair_mesh.radius = 0.21
@@ -1379,8 +1426,17 @@ func _build_car() -> void:
     car.add_child(collider)
 
     # Sculpted body layers, glazing, lamps, grille and properly grounded wheels.
-    _box_mesh(car, Vector3(2.0, 0.66, 3.8), Vector3(0.0, 0.0, 0.0), mats["car"], "CarBody")
-    _box_mesh(car, Vector3(1.55, 0.68, 1.82), Vector3(0.0, 0.57, -0.10), mats["glass"], "Cabin")
+    _box_mesh(car, Vector3(1.94, 0.58, 3.72), Vector3(0.0, 0.02, 0.0), mats["car"], "CarBody")
+    # Separate windshield, rear glass and side glazing read as automotive glass,
+    # rather than one opaque cuboid cabin.
+    _box_mesh(car, Vector3(1.48, 0.56, 1.68), Vector3(0.0, 0.58, -0.08), mats["dark"], "CabinFrame")
+    _box_mesh(car, Vector3(1.34, 0.43, 0.055), Vector3(0.0, 0.65, -0.96), mats["glass"], "FrontWindshield")
+    _box_mesh(car, Vector3(1.34, 0.43, 0.055), Vector3(0.0, 0.65, 0.80), mats["glass"], "RearWindshield")
+    for side in [-1.0, 1.0]:
+        _box_mesh(car, Vector3(0.055, 0.42, 0.68), Vector3(side * 0.75, 0.65, -0.52), mats["glass"], "FrontSideWindow")
+        _box_mesh(car, Vector3(0.055, 0.42, 0.62), Vector3(side * 0.75, 0.65, 0.34), mats["glass"], "RearSideWindow")
+        _box_mesh(car, Vector3(0.07, 0.52, 0.08), Vector3(side * 0.75, 0.60, -0.08), mats["metal"], "CabinPillar")
+    _box_mesh(car, Vector3(1.72, 0.10, 0.95), Vector3(0.0, 0.36, -1.28), mats["car"], "Bonnet")
     _box_mesh(car, Vector3(1.70, 0.12, 0.95), Vector3(0.0, 0.36, -1.28), mats["car"], "Bonnet")
     _box_mesh(car, Vector3(1.72, 0.12, 0.70), Vector3(0.0, 0.37, 1.45), mats["car"], "Boot")
     _box_mesh(car, Vector3(2.04, 0.18, 0.18), Vector3(0.0, -0.21, -1.98), mats["dark"], "FrontBumper")
