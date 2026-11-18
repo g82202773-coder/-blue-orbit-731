@@ -1252,6 +1252,30 @@ func _build_window_batch() -> void:
     parapet_mesh.size = Vector3(13.5, 0.48, 0.22)
     _create_multimesh_batch(parapet_mesh, mats["cream"], roof_parapet_transforms, "InstancedRoofParapets")
 
+    # Rooftop water tanks, lift overruns and ventilation housings break up
+    # repeated flat roof silhouettes. Reuse transforms in a few GPU batches.
+    var tank_transforms: Array[Transform3D] = []
+    var tank_cap_transforms: Array[Transform3D] = []
+    var vent_transforms: Array[Transform3D] = []
+    for i in range(0, roof_parapet_transforms.size(), 4):
+        var roof_center: Vector3 = roof_parapet_transforms[i].origin
+        tank_transforms.append(Transform3D(Basis.IDENTITY, roof_center + Vector3(2.6, 0.82, 1.8)))
+        tank_cap_transforms.append(Transform3D(Basis.IDENTITY, roof_center + Vector3(2.6, 1.68, 1.8)))
+        vent_transforms.append(Transform3D(Basis.IDENTITY, roof_center + Vector3(-2.8, 0.42, -1.8)))
+    var tank_mesh := CylinderMesh.new()
+    tank_mesh.top_radius = 0.78
+    tank_mesh.bottom_radius = 0.78
+    tank_mesh.height = 1.65
+    _create_multimesh_batch(tank_mesh, mats["metal"], tank_transforms, "InstancedRoofWaterTanks")
+    var tank_cap := CylinderMesh.new()
+    tank_cap.top_radius = 0.82
+    tank_cap.bottom_radius = 0.82
+    tank_cap.height = 0.12
+    _create_multimesh_batch(tank_cap, mats["dark"], tank_cap_transforms, "InstancedWaterTankCaps")
+    var vent_mesh := BoxMesh.new()
+    vent_mesh.size = Vector3(1.25, 0.82, 1.0)
+    _create_multimesh_batch(vent_mesh, mats["facade_dark"], vent_transforms, "InstancedRoofVentHousings")
+
 func _build_road_markings() -> void:
     var dash := BoxMesh.new()
     dash.size = Vector3(2.6, 0.035, 0.15)
@@ -1275,6 +1299,14 @@ func _build_shop_front(parent: Node3D, size: Vector3, index: int) -> void:
     _box_mesh(parent, Vector3(0.12, 2.15, 0.18), Vector3(1.48, lower_y + 0.15, facade_z - 0.08), mats["white"], "ShopDoorFrame")
     _box_mesh(parent, Vector3(2.95, 0.14, 0.22), Vector3(-1.05, lower_y - 0.95, facade_z - 0.08), mats["white"], "ShopWindowSill")
     _box_mesh(parent, Vector3(2.8, 0.12, 0.65), Vector3(-1.05, lower_y + 1.0, facade_z - 0.35), mats["yellow"], "ShopDisplayShelf")
+    _box_mesh(parent, Vector3(2.95, 0.10, 0.12), Vector3(-1.05, lower_y + 0.92, facade_z - 0.12), mats["window_frame"], "ShopWindowHeader")
+    _box_mesh(parent, Vector3(0.09, 1.78, 0.13), Vector3(-2.48, lower_y, facade_z - 0.12), mats["window_frame"], "ShopWindowLeftMullion")
+    _box_mesh(parent, Vector3(0.09, 1.78, 0.13), Vector3(0.38, lower_y, facade_z - 0.12), mats["window_frame"], "ShopWindowRightMullion")
+    _box_mesh(parent, Vector3(0.07, 1.90, 0.16), Vector3(2.58, lower_y + 0.15, facade_z - 0.14), mats["white"], "ShopDoorHandle")
+    _box_mesh(parent, Vector3(5.3, 0.12, 0.92), Vector3(0.0, -size.y * 0.5 + 2.53, facade_z - 0.40), mats["facade_dark"], "ShopAwningTop")
+    for awning_panel in range(7):
+        var panel_x := -2.25 + float(awning_panel) * 0.75
+        _box_mesh(parent, Vector3(0.70, 0.08, 0.88), Vector3(panel_x, -size.y * 0.5 + 2.47, facade_z - 0.84), sign_color, "ShopAwningPanel")
     var sign := Label3D.new()
     var names := ["MARKET", "TEA HOUSE", "MOBILE HUB", "GROCERY", "PHARMACY", "CAFE", "CLOTHING", "ELECTRONICS", "BAKERY", "BOOK STORE", "RESTAURANT", "SALON"]
     sign.text = names[(index / 2) % names.size()]
@@ -1316,15 +1348,26 @@ func _build_tree(position: Vector3) -> void:
 
 func _build_tree_batches() -> void:
     var trunk_mesh := CylinderMesh.new()
-    trunk_mesh.top_radius = 0.18
-    trunk_mesh.bottom_radius = 0.28
+    trunk_mesh.top_radius = 0.12
+    trunk_mesh.bottom_radius = 0.25
     trunk_mesh.height = 2.8
     _create_multimesh_batch(trunk_mesh, mats["brick"], tree_trunk_transforms, "InstancedTreeTrunks")
 
-    var crown_mesh := SphereMesh.new()
-    crown_mesh.radius = 1.45
-    crown_mesh.height = 2.9
-    _create_multimesh_batch(crown_mesh, mats["green"], tree_crown_transforms, "InstancedTreeCrowns")
+    # A canopy made from several offset, differently scaled leaf masses reads
+    # more naturally than a single perfect sphere. All clusters remain batched.
+    var canopy_mesh := SphereMesh.new()
+    canopy_mesh.radius = 1.0
+    canopy_mesh.height = 2.0
+    var canopy_transforms: Array[Transform3D] = []
+    var canopy_highlights: Array[Transform3D] = []
+    for tree_transform in tree_crown_transforms:
+        var p: Vector3 = tree_transform.origin
+        canopy_transforms.append(Transform3D(Basis.from_scale(Vector3(1.15, 0.88, 1.0)), p + Vector3(0.0, 0.05, 0.0)))
+        canopy_transforms.append(Transform3D(Basis.from_scale(Vector3(0.78, 0.72, 0.82)), p + Vector3(-0.78, -0.20, 0.12)))
+        canopy_transforms.append(Transform3D(Basis.from_scale(Vector3(0.82, 0.76, 0.78)), p + Vector3(0.72, -0.16, -0.18)))
+        canopy_highlights.append(Transform3D(Basis.from_scale(Vector3(0.58, 0.50, 0.56)), p + Vector3(-0.28, 0.48, -0.42)))
+    _create_multimesh_batch(canopy_mesh, mats["green"], canopy_transforms, "InstancedTreeCanopyClusters")
+    _create_multimesh_batch(canopy_mesh, mats["facade_stone"], canopy_highlights, "InstancedTreeLeafHighlights")
 
 func _build_street_sign(position: Vector3, label_text: String) -> void:
     var pole := MeshInstance3D.new()
