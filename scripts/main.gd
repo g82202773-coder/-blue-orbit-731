@@ -414,7 +414,7 @@ func _build_mall_interior() -> void:
 func _build_showroom_interior() -> void:
     showroom_interior = Node3D.new()
     showroom_interior.name = "NavapuraMotorsInterior"
-    showroom_interior.position = Vector3(150.0, 0.0, -150.0)
+    showroom_interior.position = Vector3(-150.0, 0.0, -150.0)
     add_child(showroom_interior)
     _static_box(showroom_interior, Vector3(32.0, 0.35, 24.0), Vector3(0.0, -0.18, 0.0), mats["concrete"], "ShowroomInteriorFloor")
     _static_box(showroom_interior, Vector3(32.0, 6.5, 0.4), Vector3(0.0, 3.25, -12.0), mats["cream"], "ShowroomInteriorRearWall")
@@ -1818,7 +1818,7 @@ func _update_camera(delta: float) -> void:
     var offset := Vector3(0.0, 2.35 if inside_building else 5.0, camera_distance).rotated(Vector3.UP, camera_yaw)
     var desired := focus + offset
     if inside_showroom:
-        desired.x = clampf(desired.x, 134.0, 166.0)
+        desired.x = clampf(desired.x, -166.0, -134.0)
         desired.y = clampf(desired.y, 0.8, 5.8)
         desired.z = clampf(desired.z, -166.0, -134.0)
     elif inside_mall:
@@ -2003,11 +2003,11 @@ func _interact() -> void:
         _toggle_bank()
         _show_toast("National Bank: manage your wallet, savings and loans.")
         return
-    if player.global_position.distance_to(Vector3(-20.0, 1.0, 29.0)) <= 7.0 or player.global_position.distance_to(Vector3(20.0, 1.0, 29.0)) <= 7.0:
+    if player.global_position.distance_to(Vector3(-20.0, 1.0, 10.0)) <= 7.0 or player.global_position.distance_to(Vector3(20.0, 1.0, 10.0)) <= 7.0:
         inside_showroom = true
         showroom_return_position = player.global_position
         showroom_interior.show()
-        player.global_position = Vector3(150.0, 1.0, -158.0)
+        player.global_position = Vector3(-150.0, 1.0, -158.0)
         player.rotation.y = PI
         camera_yaw = 0.0
         camera_distance = 8.0
