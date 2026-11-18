@@ -371,6 +371,7 @@ func _build_city() -> void:
     _build_road_markings()
     _build_street_sign(Vector3(0.0, 0.0, -3.0), "NAVAPURA")
     _build_street_lights()
+    _build_street_furniture()
 
 func _build_city_landmarks() -> void:
     _build_mall(Vector3(-20.0, 0.0, -20.0))
@@ -640,6 +641,61 @@ func _build_fuel_station() -> void:
     road_label.position = Vector3(0.0, 6.5, -5.4)
     road_label.pixel_size = 0.009
     station.add_child(road_label)
+
+func _build_street_furniture() -> void:
+    # Bus shelters with benches and route boards on two high-footfall streets.
+    var shelter_positions: Array[Vector3] = [Vector3(34.0, 0.0, -46.0), Vector3(-34.0, 0.0, 46.0)]
+    for shelter_index in range(shelter_positions.size()):
+        var shelter := Node3D.new()
+        shelter.name = "NavapuraBusStop"
+        shelter.position = shelter_positions[shelter_index]
+        add_child(shelter)
+        _box_mesh(shelter, Vector3(5.2, 0.16, 2.0), Vector3(0.0, 2.6, 0.0), mats["metal"], "BusShelterRoof")
+        _box_mesh(shelter, Vector3(0.12, 2.5, 1.8), Vector3(-2.5, 1.25, 0.0), mats["metal"], "BusShelterPost")
+        _box_mesh(shelter, Vector3(0.12, 2.5, 1.8), Vector3(2.5, 1.25, 0.0), mats["metal"], "BusShelterPost")
+        _box_mesh(shelter, Vector3(4.8, 1.8, 0.08), Vector3(0.0, 1.35, 0.85), mats["glass"], "BusShelterGlass")
+        _box_mesh(shelter, Vector3(3.2, 0.42, 0.72), Vector3(0.0, 0.55, -0.2), mats["blue"], "BusStopBench")
+        var route_sign := Label3D.new()
+        route_sign.text = "NAVAPURA BUS\nSTOP  05" if shelter_index == 0 else "NAVAPURA BUS\nSTOP  12"
+        route_sign.font_size = 23
+        route_sign.outline_size = 5
+        route_sign.modulate = Color("#fff0c9")
+        route_sign.position = Vector3(0.0, 2.25, -0.98)
+        route_sign.pixel_size = 0.009
+        shelter.add_child(route_sign)
+
+    # Benches, litter bins and planted islands soften the hard street grid.
+    for bench_position in [Vector3(-35.0, 0.0, -6.8), Vector3(35.0, 0.0, 6.8), Vector3(-6.8, 0.0, 35.0), Vector3(6.8, 0.0, -35.0)]:
+        _box_mesh(self, Vector3(2.4, 0.18, 0.65), bench_position + Vector3(0.0, 0.58, 0.0), mats["brick"], "StreetBenchSeat")
+        _box_mesh(self, Vector3(2.4, 0.72, 0.14), bench_position + Vector3(0.0, 0.92, 0.24), mats["brick"], "StreetBenchBack")
+        for leg_x in [-0.9, 0.9]:
+            _box_mesh(self, Vector3(0.12, 0.55, 0.12), bench_position + Vector3(leg_x, 0.28, 0.0), mats["dark"], "StreetBenchLeg")
+    for bin_position in [Vector3(-31.0, 0.0, -7.0), Vector3(31.0, 0.0, 7.0), Vector3(-7.0, 0.0, 31.0), Vector3(7.0, 0.0, -31.0)]:
+        var bin_mesh := CylinderMesh.new()
+        bin_mesh.top_radius = 0.32
+        bin_mesh.bottom_radius = 0.38
+        bin_mesh.height = 0.9
+        var bin := MeshInstance3D.new()
+        bin.name = "StreetLitterBin"
+        bin.mesh = bin_mesh
+        bin.position = bin_position + Vector3(0.0, 0.45, 0.0)
+        bin.material_override = mats["metal"]
+        add_child(bin)
+
+    # Landscaped mall forecourt planters and low bollards.
+    for planter_x in [-31.0, -9.0]:
+        _static_box(self, Vector3(2.8, 0.6, 1.8), Vector3(planter_x, 0.32, -33.5), mats["concrete"], "MallForecourtPlanter")
+        _box_mesh(self, Vector3(2.35, 0.48, 1.35), Vector3(planter_x, 0.88, -33.5), mats["green"], "PlanterShrubs")
+    for bollard_x in [-25.0, -15.0, -5.0]:
+        var bollard := MeshInstance3D.new()
+        var bollard_mesh := CylinderMesh.new()
+        bollard_mesh.top_radius = 0.12
+        bollard_mesh.bottom_radius = 0.16
+        bollard_mesh.height = 0.85
+        bollard.mesh = bollard_mesh
+        bollard.position = Vector3(bollard_x, 0.43, -33.5)
+        bollard.material_override = mats["yellow"]
+        add_child(bollard)
 
 func _build_home_property() -> void:
     var exterior := Node3D.new()
