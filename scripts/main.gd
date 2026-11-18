@@ -338,13 +338,25 @@ func _build_city() -> void:
     for x in [-60.0, -20.0, 20.0, 60.0]:
         for z in [-60.0, -20.0, 20.0, 60.0]:
             # Reserve four central commercial plots for individually modelled landmarks.
-            var landmark_plot: bool = (x == -20.0 and z == -20.0) or (x == 20.0 and z == -20.0) or (x == -20.0 and z == 20.0) or (x == 20.0 and z == 20.0)
+            var landmark_plot: bool = (x == -20.0 and z == -20.0) or (x == 20.0 and z == -20.0) or (x == -20.0 and z == 20.0) or (x == 20.0 and z == 20.0) or (x == 60.0 and z == -20.0)
             if not landmark_plot:
                 var width := 13.0 + float(index % 3) * 1.4
                 var depth := 13.0 + float((index + 1) % 3) * 1.3
                 var height := 7.0 + float((index * 5) % 12)
                 _build_building(Vector3(x, height * 0.5, z), Vector3(width, height, depth), palettes[index % palettes.size()], index)
             index += 1
+
+    # Outer neighbourhood blocks extend the playable city beyond the first central grid.
+    var perimeter_plots: Array[Vector3] = [
+        Vector3(-100.0, 0.0, -100.0), Vector3(-100.0, 0.0, -60.0),
+        Vector3(-100.0, 0.0, 60.0), Vector3(-100.0, 0.0, 100.0),
+        Vector3(100.0, 0.0, -100.0), Vector3(100.0, 0.0, 60.0)
+    ]
+    for plot_index in range(perimeter_plots.size()):
+        var plot := perimeter_plots[plot_index]
+        var outer_height := 10.0 + float((plot_index * 7) % 15)
+        var outer_size := Vector3(15.0 + float(plot_index % 3) * 1.5, outer_height, 14.0 + float((plot_index + 1) % 3) * 1.5)
+        _build_building(Vector3(plot.x, outer_height * 0.5, plot.z), outer_size, palettes[(plot_index + 1) % palettes.size()], index + plot_index)
 
     for p in [
         Vector3(-28.0, 0.0, -13.0), Vector3(28.0, 0.0, -13.0),
@@ -1029,7 +1041,7 @@ func _build_building(center: Vector3, size: Vector3, facade: Material, index: in
             trim_transforms.append(Transform3D(Basis.IDENTITY, center + Vector3(0.0, trim_y, size.z * 0.5 + 0.02)))
             trim_transforms.append(Transform3D(Basis(Vector3.UP, PI * 0.5), center + Vector3(-size.x * 0.5 - 0.02, trim_y, 0.0)))
             trim_transforms.append(Transform3D(Basis(Vector3.UP, PI * 0.5), center + Vector3(size.x * 0.5 + 0.02, trim_y, 0.0)))
-    if index % 4 == 0:
+    if index % 2 == 0:
         _build_shop_front(body, size, index)
 
 func _create_multimesh_batch(mesh: Mesh, material: Material, transforms: Array[Transform3D], node_name: String) -> void:
@@ -1088,17 +1100,23 @@ func _build_road_markings() -> void:
     _create_multimesh_batch(zebra, mats["white"], crossings, "InstancedZebraCrossings")
 
 func _build_shop_front(parent: Node3D, size: Vector3, index: int) -> void:
-    var sign_color: Material = mats["red"] if index % 8 == 0 else mats["blue"]
-    _box_mesh(parent, Vector3(4.5, 0.72, 0.24), Vector3(0.0, -size.y * 0.5 + 1.65, -size.z * 0.5 - 0.08), sign_color, "ShopCanopy")
-    _box_mesh(parent, Vector3(2.7, 1.7, 0.10), Vector3(0.0, -size.y * 0.5 + 0.75, -size.z * 0.5 - 0.045), mats["glass"], "ShopfrontWindow")
+    var sign_color: Material = mats["red"] if index % 4 == 0 else mats["blue"]
+    var facade_z := -size.z * 0.5 - 0.10
+    var lower_y := -size.y * 0.5 + 1.05
+    _box_mesh(parent, Vector3(5.0, 0.78, 0.32), Vector3(0.0, -size.y * 0.5 + 2.05, facade_z), sign_color, "ShopCanopy")
+    _box_mesh(parent, Vector3(2.8, 1.75, 0.12), Vector3(-1.05, lower_y, facade_z - 0.04), mats["glass"], "ShopfrontWindow")
+    _box_mesh(parent, Vector3(1.05, 2.05, 0.14), Vector3(2.05, lower_y + 0.15, facade_z - 0.05), mats["dark"], "ShopEntranceDoor")
+    _box_mesh(parent, Vector3(0.12, 2.15, 0.18), Vector3(1.48, lower_y + 0.15, facade_z - 0.08), mats["white"], "ShopDoorFrame")
+    _box_mesh(parent, Vector3(2.95, 0.14, 0.22), Vector3(-1.05, lower_y - 0.95, facade_z - 0.08), mats["white"], "ShopWindowSill")
+    _box_mesh(parent, Vector3(2.8, 0.12, 0.65), Vector3(-1.05, lower_y + 1.0, facade_z - 0.35), mats["yellow"], "ShopDisplayShelf")
     var sign := Label3D.new()
-    var names := ["MARKET", "TEA HOUSE", "MOBILE HUB", "GROCERY"]
-    sign.text = names[(index / 4) % names.size()]
-    sign.font_size = 28
+    var names := ["MARKET", "TEA HOUSE", "MOBILE HUB", "GROCERY", "PHARMACY", "CAFE", "CLOTHING", "ELECTRONICS", "BAKERY", "BOOK STORE", "RESTAURANT", "SALON"]
+    sign.text = names[(index / 2) % names.size()]
+    sign.font_size = 25
     sign.outline_size = 5
     sign.modulate = Color("#fff4d8")
-    sign.position = Vector3(0.0, -size.y * 0.5 + 1.75, -size.z * 0.5 - 0.13)
-    sign.pixel_size = 0.012
+    sign.position = Vector3(0.0, -size.y * 0.5 + 2.15, facade_z - 0.18)
+    sign.pixel_size = 0.011
     if index == 4:
         shop_sign = sign
     parent.add_child(sign)
