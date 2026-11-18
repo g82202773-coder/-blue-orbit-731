@@ -253,7 +253,7 @@ func _build_city() -> void:
     for x in [-60.0, -20.0, 20.0, 60.0]:
         for z in [-60.0, -20.0, 20.0, 60.0]:
             # Reserve four central commercial plots for individually modelled landmarks.
-            var landmark_plot := (x == -20.0 and z == -20.0) or (x == 20.0 and z == -20.0) or (x == -20.0 and z == 20.0) or (x == 20.0 and z == 20.0)
+            var landmark_plot: bool = (x == -20.0 and z == -20.0) or (x == 20.0 and z == -20.0) or (x == -20.0 and z == 20.0) or (x == 20.0 and z == 20.0)
             if not landmark_plot:
                 var width := 13.0 + float(index % 3) * 1.4
                 var depth := 13.0 + float((index + 1) % 3) * 1.3
