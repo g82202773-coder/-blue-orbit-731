@@ -24,6 +24,12 @@ if [[ "$BOOTED" != "1" ]]; then
 fi
 
 adb logcat -c
+# The game is exported in landscape. Rotate the emulator BEFORE launching so
+# Android does not recreate/destroy GodotActivity during engine initialization.
+adb shell settings put system accelerometer_rotation 0
+adb shell settings put system user_rotation 1
+sleep 2
+
 # Suppress Android's first-launch immersive-mode confirmation.
 adb shell settings put secure immersive_mode_confirmations confirmed || true
 adb install -r "$APK" > build/install.log 2>&1
