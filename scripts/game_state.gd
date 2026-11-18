@@ -395,7 +395,7 @@ func refuel_vehicle(kind: String = "") -> bool:
     set_vehicle_fuel(target_kind, 100.0)
     add_transaction("%s refuel • -₹300" % target_kind.capitalize())
     save_game()
-    toast_requested.emit("%s refuelled to 100%." % target_kind.capitalize())
+    toast_requested.emit("%s refuelled to 100%%." % target_kind.capitalize())
     return true
 
 func buy_home() -> bool:
