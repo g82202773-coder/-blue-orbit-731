@@ -28,6 +28,8 @@ var shop_sign: Label3D
 var shop_tier1_visuals: Node3D
 var shop_tier2_visuals: Node3D
 var apartment_interior: Node3D
+var mall_interior: Node3D
+var inside_mall := false
 var apartment_sign: Label3D
 var window_transforms: Array[Transform3D] = []
 var trim_transforms: Array[Transform3D] = []
@@ -114,6 +116,7 @@ func _ready() -> void:
     _build_environment()
     _build_city()
     _build_city_landmarks()
+    _build_mall_interior()
     _build_traffic()
     _build_pedestrians()
     _build_fuel_station()
@@ -381,6 +384,28 @@ func _build_mall(center: Vector3) -> void:
     mall.add_child(sign)
     for x in [-8.0, -4.0, 4.0, 8.0]:
         _box_mesh(mall, Vector3(2.5, 0.10, 4.0), Vector3(x, 0.08, 13.0), mats["white"], "MallParkingBay")
+
+func _build_mall_interior() -> void:
+    # A separate interior cell keeps the mall walkable without loading hundreds
+    # of extra meshes into the outdoor city view.
+    mall_interior = Node3D.new()
+    mall_interior.name = "CentralMallInterior"
+    mall_interior.position = Vector3(-150.0, 0.0, 150.0)
+    add_child(mall_interior)
+    _static_box(mall_interior, Vector3(34.0, 0.5, 28.0), Vector3(0.0, -0.25, 0.0), mats["sidewalk"], "MallInteriorFloor")
+    _static_box(mall_interior, Vector3(34.0, 7.0, 0.5), Vector3(0.0, 3.5, -14.0), mats["cream"], "MallInteriorBackWall")
+    _static_box(mall_interior, Vector3(0.5, 7.0, 28.0), Vector3(-17.0, 3.5, 0.0), mats["cream"], "MallInteriorLeftWall")
+    _static_box(mall_interior, Vector3(0.5, 7.0, 28.0), Vector3(17.0, 3.5, 0.0), mats["cream"], "MallInteriorRightWall")
+    _box_mesh(mall_interior, Vector3(33.0, 0.35, 27.0), Vector3(0.0, 7.0, 0.0), mats["dark"], "MallInteriorCeiling")
+    var shop_materials: Array[Material] = [mats["blue"], mats["brick"], mats["green"], mats["yellow"]]
+    for shop_index in range(4):
+        var x := -12.0 + float(shop_index) * 8.0
+        _box_mesh(mall_interior, Vector3(6.4, 3.8, 0.35), Vector3(x, 2.1, -10.5), shop_materials[shop_index], "MallRetailUnit")
+        _box_mesh(mall_interior, Vector3(5.8, 1.7, 0.16), Vector3(x, 1.15, -10.25), mats["glass"], "MallShopWindow")
+        _box_mesh(mall_interior, Vector3(6.4, 0.18, 1.0), Vector3(x, 4.15, -10.4), mats["white"], "MallShopCanopy")
+    _box_mesh(mall_interior, Vector3(8.0, 0.12, 5.0), Vector3(0.0, 0.08, 2.0), mats["white"], "MallAtriumFeature")
+    _box_mesh(mall_interior, Vector3(1.8, 3.4, 1.0), Vector3(-14.0, 1.7, 11.0), mats["metal"], "MallExitDoor")
+    mall_interior.hide()
 
 func _build_bank(center: Vector3) -> void:
     var bank := Node3D.new()
@@ -1746,10 +1771,14 @@ func _drive_car(delta: float) -> void:
 
 func _update_camera(delta: float) -> void:
     var focus := active_vehicle.global_position if driving and is_instance_valid(active_vehicle) else player.global_position
-    var inside_building := GameState.inside_home or GameState.inside_shop or GameState.inside_apartment
+    var inside_building := GameState.inside_home or GameState.inside_shop or GameState.inside_apartment or inside_mall
     var offset := Vector3(0.0, 2.35 if inside_building else 5.0, camera_distance).rotated(Vector3.UP, camera_yaw)
     var desired := focus + offset
-    if GameState.inside_home:
+    if inside_mall:
+        desired.x = clampf(desired.x, -166.0, -134.0)
+        desired.y = clampf(desired.y, 0.8, 6.0)
+        desired.z = clampf(desired.z, 136.0, 164.0)
+    elif GameState.inside_home:
         desired.x = clampf(desired.x, 143.5, 156.5)
         desired.y = clampf(desired.y, 0.8, 3.55)
         desired.z = clampf(desired.z, 143.5, 156.5)
@@ -1883,6 +1912,12 @@ func _cancel_job() -> void:
     _refresh_ui()
 
 func _interact() -> void:
+    if inside_mall:
+        inside_mall = false
+        mall_interior.hide()
+        player.global_position = Vector3(-20.0, 1.0, -31.0)
+        _show_toast("You exited Navapura Central Mall.")
+        return
     if GameState.inside_home:
         _exit_home()
         return
@@ -1903,6 +1938,26 @@ func _interact() -> void:
         return
     if GameState.apartment_owned and player.global_position.distance_to(APARTMENT_DOOR_POSITION) <= 5.5:
         _enter_apartment()
+        return
+    if player.global_position.distance_to(Vector3(-20.0, 1.0, -31.0)) <= 7.0:
+        inside_mall = true
+        mall_interior.show()
+        player.global_position = Vector3(-150.0, 1.0, 10.0)
+        player.rotation.y = PI
+        _show_toast("Central Mall: explore the retail units. Press INTERACT to exit.")
+        return
+    if player.global_position.distance_to(Vector3(20.0, 1.0, -29.0)) <= 7.0:
+        _toggle_bank()
+        _show_toast("National Bank: manage your wallet, savings and loans.")
+        return
+    if player.global_position.distance_to(Vector3(-20.0, 1.0, 29.0)) <= 7.0:
+        _show_toast("Navapura Motors: showroom open. Vehicle purchasing is coming next.")
+        return
+    if player.global_position.distance_to(Vector3(20.0, 1.0, 29.0)) <= 7.0:
+        _show_toast("City Auto Gallery: inspect the showroom. Vehicle purchasing is coming next.")
+        return
+    if player.global_position.distance_to(Vector3(60.0, 1.0, -29.0)) <= 8.0:
+        _show_toast("Navapura Business Tower: commercial offices and property district.")
         return
     var nearest_vehicle: CharacterBody3D = car
     var nearest_distance := player.global_position.distance_to(car.global_position)
