@@ -1,17 +1,17 @@
-extends SceneTree
+extends Node
 
 const MAIN_SCENE = preload("res://scenes/main.tscn")
 
-func _initialize() -> void:
+func _ready() -> void:
     call_deferred("_run_world_smoke")
 
 func _run_world_smoke() -> void:
     GameState.shop_owned = true
     GameState.shop_upgrade_level = 2
     var scene := MAIN_SCENE.instantiate()
-    root.add_child(scene)
-    await process_frame
-    await process_frame
+    add_child(scene)
+    await get_tree().process_frame
+    await get_tree().process_frame
 
     var required_walls := [
         "InteriorWestWall",
@@ -45,9 +45,9 @@ func _run_world_smoke() -> void:
         return
 
     scene.queue_free()
-    await process_frame
+    await get_tree().process_frame
     print("LIFE EMPIRE world smoke passed: interior wall collisions, apartment floor and shop upgrade visuals.")
-    quit(0)
+    get_tree().quit(0)
 
 func _find_named_node(parent: Node, target_name: String) -> Node:
     if parent.name == target_name:
@@ -66,4 +66,4 @@ func _has_collision_shape(node: Node) -> bool:
 
 func _fail(message: String) -> void:
     push_error(message)
-    quit(1)
+    get_tree().quit(1)
