@@ -218,11 +218,11 @@ func _create_materials() -> void:
     # Physically based materials: higher-frequency surface response and less
     # saturated colours help the mobile renderer read as a real city.
     mats = {
-        "asphalt": _make_weathered_material(Color("#34383b"), 0.96, 3.8),
+        "asphalt": _material(Color("#34383b"), 0.96),
         "road_line": _material(Color("#d8cfad"), 0.82),
-        "sidewalk": _make_weathered_material(Color("#858783"), 0.92, 2.4),
+        "sidewalk": _material(Color("#858783"), 0.92),
         "grass": _material(Color("#4d6044"), 1.0),
-        "concrete": _make_weathered_material(Color("#9b9992"), 0.94, 2.0),
+        "concrete": _material(Color("#9b9992"), 0.94),
         "cream": _material(Color("#aaa69d"), 0.88),
         "blue": _material(Color("#647681"), 0.76),
         "brick": _material(Color("#76594b"), 0.93),
@@ -238,10 +238,10 @@ func _create_materials() -> void:
         "yellow": _material(Color("#c7a75d"), 0.52),
         "white": _material(Color("#d0cec6"), 0.68),
         "red": _material(Color("#91483f"), 0.78),
-        "facade_light": _make_weathered_material(Color("#aaa69d"), 0.88, 1.6),
-        "facade_sand": _make_weathered_material(Color("#9b8e7c"), 0.9, 1.6),
-        "facade_dark": _make_weathered_material(Color("#62696b"), 0.84, 1.6),
-        "facade_stone": _make_weathered_material(Color("#8d918e"), 0.94, 1.6),
+        "facade_light": _material(Color("#aaa69d"), 0.88),
+        "facade_sand": _material(Color("#9b8e7c"), 0.9),
+        "facade_dark": _material(Color("#62696b"), 0.84),
+        "facade_stone": _material(Color("#8d918e"), 0.94),
         "window_frame": _material(Color("#30383c"), 0.48),
         "roof_gravel": _material(Color("#696b68"), 0.98)
     }
@@ -252,42 +252,6 @@ func _material(color: Color, rough: float) -> StandardMaterial3D:
     result.roughness = rough
     result.metallic = 0.0
     result.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
-    return result
-
-func _make_weathered_material(base_color: Color, roughness: float, grain_scale: float) -> ShaderMaterial:
-    # Lightweight world-space procedural grain: subtle concrete/asphalt variation
-    # without shipping large texture files or adding extra draw calls.
-    var shader := Shader.new()
-    shader.code = """
-shader_type spatial;
-render_mode diffuse_burley, specular_schlick_ggx;
-uniform vec4 base_tint : source_color = vec4(0.5, 0.5, 0.5, 1.0);
-uniform float surface_roughness : hint_range(0.0, 1.0) = 0.9;
-uniform float grain_scale = 2.0;
-varying vec3 world_position;
-float hash31(vec3 p) {
-    p = fract(p * 0.1031);
-    p += dot(p, p.yzx + 33.33);
-    return fract((p.x + p.y) * p.z);
-}
-void vertex() {
-    world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-}
-void fragment() {
-    vec3 cell = floor(world_position * grain_scale);
-    float broad = hash31(cell);
-    float fine = hash31(floor(world_position * grain_scale * 7.0));
-    float variation = 0.955 + broad * 0.065 + fine * 0.018;
-    ALBEDO = base_tint.rgb * variation;
-    ROUGHNESS = surface_roughness;
-    METALLIC = 0.0;
-}
-"""
-    var result := ShaderMaterial.new()
-    result.shader = shader
-    result.set_shader_parameter("base_tint", base_color)
-    result.set_shader_parameter("surface_roughness", roughness)
-    result.set_shader_parameter("grain_scale", grain_scale)
     return result
 
 func _make_glass_material() -> StandardMaterial3D:
@@ -345,7 +309,7 @@ func _build_environment() -> void:
     sky.sky_material = ProceduralSkyMaterial.new()
     environment.sky = sky
     environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-    environment.ambient_light_energy = 0.72
+    environment.ambient_light_energy = 0.88
     environment.reflected_light_source = Environment.REFLECTION_SOURCE_BG
     environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
     environment.tonemap_exposure = 1.0
@@ -362,7 +326,7 @@ func _build_environment() -> void:
     sun_light.light_energy = 1.05
     # Real-time shadow maps are disproportionately expensive on entry-level phones.
     # Ambient/fill lighting keeps the scene readable without them.
-    sun_light.shadow_enabled = true
+    sun_light.shadow_enabled = false
     sun_light.shadow_bias = 0.06
     sun_light.shadow_normal_bias = 1.2
     sun_light.directional_shadow_max_distance = 48.0
@@ -1157,6 +1121,10 @@ func _build_building(center: Vector3, size: Vector3, facade: Material, index: in
     _box_mesh(body, Vector3(size.x + 0.18, 0.42, size.z + 0.18), Vector3(0.0, -size.y * 0.5 + 0.22, 0.0), mats["facade_dark"], "GroundFloorPlinth")
     _box_mesh(body, Vector3(size.x + 0.24, 0.22, size.z + 0.24), Vector3(0.0, size.y * 0.5 - 0.14, 0.0), mats["facade_light"], "RoofCoping")
     _box_mesh(body, Vector3(size.x + 0.35, 0.35, size.z + 0.35), Vector3(0.0, size.y * 0.5 + 0.18, 0.0), mats["roof_gravel"], "Roof")
+    # Recessed entrance bay and lintel create a readable ground-floor doorway.
+    _box_mesh(body, Vector3(1.75, 2.35, 0.16), Vector3(0.0, -size.y * 0.5 + 1.22, -size.z * 0.5 - 0.06), mats["window_frame"], "EntranceRecess")
+    _box_mesh(body, Vector3(1.42, 2.05, 0.10), Vector3(0.0, -size.y * 0.5 + 1.12, -size.z * 0.5 - 0.16), mats["glass"], "EntranceGlass")
+    _box_mesh(body, Vector3(2.0, 0.18, 0.22), Vector3(0.0, -size.y * 0.5 + 2.45, -size.z * 0.5 - 0.12), mats["facade_light"], "EntranceLintel")
     # Vertical corner pilasters add depth and catch sunlight at grazing angles.
     for corner_x in [-1.0, 1.0]:
         for corner_z in [-1.0, 1.0]:
@@ -1367,7 +1335,7 @@ func _build_tree_batches() -> void:
         canopy_transforms.append(Transform3D(Basis.from_scale(Vector3(0.82, 0.76, 0.78)), p + Vector3(0.72, -0.16, -0.18)))
         canopy_highlights.append(Transform3D(Basis.from_scale(Vector3(0.58, 0.50, 0.56)), p + Vector3(-0.28, 0.48, -0.42)))
     _create_multimesh_batch(canopy_mesh, mats["green"], canopy_transforms, "InstancedTreeCanopyClusters")
-    _create_multimesh_batch(canopy_mesh, mats["facade_stone"], canopy_highlights, "InstancedTreeLeafHighlights")
+    _create_multimesh_batch(canopy_mesh, mats["green"], canopy_highlights, "InstancedTreeLeafHighlights")
 
 func _build_street_sign(position: Vector3, label_text: String) -> void:
     var pole := MeshInstance3D.new()
