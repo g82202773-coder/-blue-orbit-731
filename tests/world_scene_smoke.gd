@@ -19,7 +19,8 @@ func _run_world_smoke() -> void:
         "NAVAPURAMOTORS",
         "CITYAUTOGALLERY",
         "NavapuraBusinessTower",
-        "CentralMallInterior"
+        "CentralMallInterior",
+        "NavapuraMotorsInterior"
     ]
     for node_name in required_city_nodes:
         if _find_named_node(scene, node_name) == null:
@@ -44,6 +45,19 @@ func _run_world_smoke() -> void:
         _fail("Mall exit interaction did not return to the city.")
         return
 
+    # The showroom must open a separate walkable vehicle gallery and return.
+    player.global_position = Vector3(-20.0, 1.0, 29.0)
+    scene.call("_interact")
+    await get_tree().process_frame
+    if not scene.get("inside_showroom") or not scene.get("showroom_interior").visible:
+        _fail("Showroom interaction did not open the vehicle gallery.")
+        return
+    scene.call("_interact")
+    await get_tree().process_frame
+    if scene.get("inside_showroom") or scene.get("showroom_interior").visible:
+        _fail("Showroom exit interaction did not return to the city.")
+        return
+
     # The bank building must route the player to the existing bank interface.
     player.global_position = Vector3(20.0, 1.0, -29.0)
     scene.call("_interact")
@@ -54,7 +68,7 @@ func _run_world_smoke() -> void:
 
     scene.queue_free()
     await get_tree().process_frame
-    print("LIFE EMPIRE playable city smoke passed: player, landmarks, mall enter/exit and bank interaction verified.")
+    print("LIFE EMPIRE playable city smoke passed: player, landmarks, mall and showroom enter/exit plus bank interaction verified.")
     get_tree().quit(0)
 
 func _find_named_node(parent: Node, target_name: String) -> Node:
