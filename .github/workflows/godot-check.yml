@@ -37,7 +37,7 @@ jobs:
         run: godot --headless --path . --script res://tests/economy_smoke.gd
 
       - name: Run world geometry and upgrade-visual smoke test
-        run: godot --headless --path . --script res://tests/world_scene_smoke.gd
+        run: godot --headless --path . res://tests/world_scene_smoke.tscn
 
       - name: Launch main scene and fail on startup script errors
         shell: bash
