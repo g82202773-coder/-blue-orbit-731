@@ -33,6 +33,9 @@ var inside_mall := false
 var showroom_interior: Node3D
 var inside_showroom := false
 var showroom_return_position := Vector3.ZERO
+var office_interior: Node3D
+var inside_office := false
+var office_return_position := Vector3.ZERO
 var apartment_sign: Label3D
 var window_transforms: Array[Transform3D] = []
 var trim_transforms: Array[Transform3D] = []
@@ -121,6 +124,7 @@ func _ready() -> void:
     _build_city_landmarks()
     _build_mall_interior()
     _build_showroom_interior()
+    _build_office_interior()
     _build_traffic()
     _build_pedestrians()
     _build_fuel_station()
@@ -449,6 +453,36 @@ func _build_showroom_interior() -> void:
     gallery_sign.pixel_size = 0.012
     showroom_interior.add_child(gallery_sign)
     showroom_interior.hide()
+
+func _build_office_interior() -> void:
+    office_interior = Node3D.new()
+    office_interior.name = "BusinessTowerLobby"
+    office_interior.position = Vector3(180.0, 0.0, -150.0)
+    add_child(office_interior)
+    _static_box(office_interior, Vector3(28.0, 0.35, 22.0), Vector3(0.0, -0.18, 0.0), mats["concrete"], "OfficeLobbyFloor")
+    _static_box(office_interior, Vector3(28.0, 5.5, 0.4), Vector3(0.0, 2.75, -11.0), mats["cream"], "OfficeLobbyRearWall")
+    _static_box(office_interior, Vector3(0.4, 5.5, 22.0), Vector3(-14.0, 2.75, 0.0), mats["cream"], "OfficeLobbyLeftWall")
+    _static_box(office_interior, Vector3(0.4, 5.5, 22.0), Vector3(14.0, 2.75, 0.0), mats["cream"], "OfficeLobbyRightWall")
+    _box_mesh(office_interior, Vector3(27.5, 0.25, 21.5), Vector3(0.0, 5.55, 0.0), mats["dark"], "OfficeLobbyCeiling")
+    _box_mesh(office_interior, Vector3(10.0, 1.05, 2.2), Vector3(0.0, 0.65, -6.0), mats["blue"], "ReceptionDesk")
+    _box_mesh(office_interior, Vector3(4.0, 0.12, 1.0), Vector3(0.0, 1.24, -6.0), mats["white"], "ReceptionCountertop")
+    for elevator_x in [-8.0, 8.0]:
+        _box_mesh(office_interior, Vector3(3.0, 4.2, 0.25), Vector3(elevator_x, 2.1, -10.65), mats["metal"], "ElevatorDoor")
+        _box_mesh(office_interior, Vector3(0.18, 0.5, 0.12), Vector3(elevator_x + 1.8, 2.3, -10.5), mats["yellow"], "ElevatorCallButton")
+    for desk_x in [-8.0, 8.0]:
+        _box_mesh(office_interior, Vector3(4.0, 0.18, 2.0), Vector3(desk_x, 0.9, 4.0), mats["cream"], "OfficeWorkDesk")
+        _box_mesh(office_interior, Vector3(1.2, 0.08, 0.8), Vector3(desk_x, 1.12, 3.7), mats["dark"], "OfficeMonitor")
+        _box_mesh(office_interior, Vector3(1.2, 0.75, 1.0), Vector3(desk_x, 0.45, 5.5), mats["blue"], "OfficeChair")
+    var office_sign := Label3D.new()
+    office_sign.name = "OfficeLobbySign"
+    office_sign.text = "NAVAPURA BUSINESS TOWER"
+    office_sign.font_size = 32
+    office_sign.outline_size = 6
+    office_sign.modulate = Color("#fff0c9")
+    office_sign.position = Vector3(0.0, 4.5, -10.55)
+    office_sign.pixel_size = 0.012
+    office_interior.add_child(office_sign)
+    office_interior.hide()
 
 func _build_bank(center: Vector3) -> void:
     var bank := Node3D.new()
@@ -1814,10 +1848,14 @@ func _drive_car(delta: float) -> void:
 
 func _update_camera(delta: float) -> void:
     var focus := active_vehicle.global_position if driving and is_instance_valid(active_vehicle) else player.global_position
-    var inside_building := GameState.inside_home or GameState.inside_shop or GameState.inside_apartment or inside_mall or inside_showroom
+    var inside_building := GameState.inside_home or GameState.inside_shop or GameState.inside_apartment or inside_mall or inside_showroom or inside_office
     var offset := Vector3(0.0, 2.35 if inside_building else 5.0, camera_distance).rotated(Vector3.UP, camera_yaw)
     var desired := focus + offset
-    if inside_showroom:
+    if inside_office:
+        desired.x = clampf(desired.x, 166.0, 194.0)
+        desired.y = clampf(desired.y, 0.8, 5.0)
+        desired.z = clampf(desired.z, -166.0, -134.0)
+    elif inside_showroom:
         desired.x = clampf(desired.x, -166.0, -134.0)
         desired.y = clampf(desired.y, 0.8, 5.8)
         desired.z = clampf(desired.z, -166.0, -134.0)
@@ -1959,6 +1997,12 @@ func _cancel_job() -> void:
     _refresh_ui()
 
 func _interact() -> void:
+    if inside_office:
+        inside_office = false
+        office_interior.hide()
+        player.global_position = office_return_position
+        _show_toast("You exited Navapura Business Tower.")
+        return
     if inside_showroom:
         inside_showroom = false
         showroom_interior.hide()
@@ -2014,7 +2058,14 @@ func _interact() -> void:
         _show_toast("Vehicle gallery: inspect the display cars. Press INTERACT to exit.")
         return
     if player.global_position.distance_to(Vector3(60.0, 1.0, -29.0)) <= 8.0:
-        _show_toast("Navapura Business Tower: commercial offices and property district.")
+        inside_office = true
+        office_return_position = player.global_position
+        office_interior.show()
+        player.global_position = Vector3(180.0, 1.0, -158.0)
+        player.rotation.y = PI
+        camera_yaw = 0.0
+        camera_distance = 7.5
+        _show_toast("Business Tower lobby: reception, elevators and office desks. Press INTERACT to exit.")
         return
     var nearest_vehicle: CharacterBody3D = car
     var nearest_distance := player.global_position.distance_to(car.global_position)
