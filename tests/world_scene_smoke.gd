@@ -46,7 +46,7 @@ func _run_world_smoke() -> void:
         return
 
     # The showroom must open a separate walkable vehicle gallery and return.
-    player.global_position = Vector3(-20.0, 1.0, 29.0)
+    player.global_position = Vector3(-20.0, 1.0, 10.0)
     scene.call("_interact")
     await get_tree().process_frame
     if not scene.get("inside_showroom") or not scene.get("showroom_interior").visible:
