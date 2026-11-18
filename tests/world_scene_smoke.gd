@@ -12,34 +12,49 @@ func _run_world_smoke() -> void:
     await get_tree().process_frame
 
     var required_city_nodes := [
-        "CityShowcaseCamera",
+        "Player",
+        "FollowCamera",
         "NavapuraCentralMall",
         "NavapuraNationalBank",
         "NAVAPURAMOTORS",
         "CITYAUTOGALLERY",
-        "NavapuraBusinessTower"
+        "NavapuraBusinessTower",
+        "CentralMallInterior"
     ]
     for node_name in required_city_nodes:
         if _find_named_node(scene, node_name) == null:
-            _fail("Missing city showcase node: %s" % node_name)
+            _fail("Missing playable city node: %s" % node_name)
             return
 
-    var forbidden_actor_nodes := [
-        "Player",
-        "Car",
-        "Motorbike",
-        "Pedestrians",
-        "TrafficVehicles",
-        "HUD"
-    ]
-    for node_name in forbidden_actor_nodes:
-        if _find_named_node(scene, node_name) != null:
-            _fail("City-only showcase unexpectedly instantiated gameplay node: %s" % node_name)
-            return
+    var player: CharacterBody3D = scene.get("player")
+    if player == null:
+        _fail("Playable city did not create its player.")
+        return
+
+    # Exercise the actual mall enter/exit interaction path.
+    player.global_position = Vector3(-20.0, 1.0, -31.0)
+    scene.call("_interact")
+    await get_tree().process_frame
+    if not scene.get("inside_mall") or not scene.get("mall_interior").visible:
+        _fail("Mall entrance interaction did not open the interior.")
+        return
+    scene.call("_interact")
+    await get_tree().process_frame
+    if scene.get("inside_mall") or scene.get("mall_interior").visible:
+        _fail("Mall exit interaction did not return to the city.")
+        return
+
+    # The bank building must route the player to the existing bank interface.
+    player.global_position = Vector3(20.0, 1.0, -29.0)
+    scene.call("_interact")
+    await get_tree().process_frame
+    if not scene.get("bank_panel").visible:
+        _fail("Bank entrance did not open the banking interface.")
+        return
 
     scene.queue_free()
     await get_tree().process_frame
-    print("LIFE EMPIRE city showcase smoke passed: landmarks and showcase camera present; gameplay actors absent.")
+    print("LIFE EMPIRE playable city smoke passed: player, landmarks, mall enter/exit and bank interaction verified.")
     get_tree().quit(0)
 
 func _find_named_node(parent: Node, target_name: String) -> Node:
