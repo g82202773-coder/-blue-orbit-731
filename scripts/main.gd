@@ -643,7 +643,8 @@ func _build_traffic() -> void:
         Vector3(-80.0, 0.55, -40.0)
     ])
     var colors: Array[Color] = [Color("#b94c3d"), Color("#d1a33f"), Color("#e5e2d8")]
-    for i in range(2):
+    # Three lightweight traffic actors keep the main road from feeling empty.
+    for i in range(3):
         var traffic_car := Node3D.new()
         traffic_car.set_script(TRAFFIC_SCRIPT)
         traffic_car.set("route", route)
@@ -660,7 +661,9 @@ func _build_pedestrians() -> void:
         PackedVector3Array([Vector3(30.0, 0.9, 32.0), Vector3(-30.0, 0.9, 32.0), Vector3(-30.0, 0.9, 48.0), Vector3(30.0, 0.9, 48.0)])
     ]
     var clothes: Array[Color] = [Color("#315e83"), Color("#9b5a43"), Color("#4f7550"), Color("#80628c")]
-    for i in range(2):
+    # Use every authored sidewalk route so pedestrian movement is distributed
+    # around the district rather than concentrated on only two streets.
+    for i in range(routes.size()):
         var pedestrian := Node3D.new()
         pedestrian.set_script(PEDESTRIAN_SCRIPT)
         pedestrian.set("route", routes[i])
@@ -2479,17 +2482,19 @@ func _next_day() -> void:
 
 func _sync_save_state() -> void:
     if is_instance_valid(player):
-        # The lightweight public interiors are scene-local cells, not persistent
-        # homes. Save their exterior doorway so a reload always returns outdoors.
+        # Public interiors are scene-local cells, not persistent properties.
+        # Persist their exterior return point without moving the live player:
+        # autosave can run while the player is exploring an interior.
+        var saved_player_position: Vector3 = player.global_position
         if inside_mall:
-            player.global_position = Vector3(-20.0, 1.0, -31.0)
+            saved_player_position = Vector3(-20.0, 1.0, -31.0)
         elif inside_showroom:
-            player.global_position = showroom_return_position
+            saved_player_position = showroom_return_position
         elif inside_office:
-            player.global_position = office_return_position
+            saved_player_position = office_return_position
         elif inside_public_store:
-            player.global_position = public_store_return_position
-        GameState.set_player_position(player.global_position)
+            saved_player_position = public_store_return_position
+        GameState.set_player_position(saved_player_position)
     if driving and is_instance_valid(active_vehicle):
         GameState.set_vehicle_state(active_vehicle_kind, active_vehicle.global_position, active_vehicle.rotation.y, true)
     else:
