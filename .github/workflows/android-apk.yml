@@ -1,10 +1,20 @@
 name: Build Android debug APK
 # Builds a sideloadable debug APK and emulator QA report for phone testing.
-# Public repository build triggered after visibility change for device testing.
 
 on:
   workflow_dispatch:
   push:
+    branches: [main]
+    paths:
+      - "project.godot"
+      - "export_presets.cfg"
+      - "scenes/**"
+      - "scripts/**"
+      - "assets/**"
+      - "tests/**"
+      - ".github/workflows/android-apk.yml"
+      - ".github/scripts/**"
+  pull_request:
     branches: [main]
     paths:
       - "project.godot"
@@ -87,6 +97,9 @@ jobs:
             echo "Godot import reported script errors."
             exit 1
           fi
+
+      - name: Run Android project foundation checks
+        run: godot --headless --path . --script res://tests/project_foundation_smoke.gd
 
       - name: Run economy and persistence regression tests
         run: godot --headless --path . --script res://tests/economy_smoke.gd

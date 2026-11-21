@@ -33,6 +33,9 @@ jobs:
             exit 1
           fi
 
+      - name: Run Android project foundation checks
+        run: godot --headless --path . --script res://tests/project_foundation_smoke.gd
+
       - name: Run economy and save/load tests
         run: godot --headless --path . --script res://tests/economy_smoke.gd
 
